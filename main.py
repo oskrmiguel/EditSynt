@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 
 import data
+import vocabulary
 from checkpoint import Checkpoint
 from editnts import EditNTS
 from evaluator import Evaluator
@@ -205,10 +206,10 @@ def main():
 
             # load vocab-related files and init vocab
     print('*'*10)
-    vocab = data.Vocab()
+    vocab = vocabulary.Vocab()
     vocab.add_vocab_from_file(args.vocab_path+'vocab.txt', args.vocab_size)
     vocab.add_embedding(gloveFile=args.vocab_path+'glove.6B.100d.txt')
-    pos_vocab = data.POSvocab(args.vocab_path) #load pos-tags embeddings
+    pos_vocab = vocabulary.POSvocab(args.vocab_path) #load pos-tags embeddings
     print('*' * 10)
 
     print(args)

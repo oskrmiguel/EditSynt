@@ -94,66 +94,6 @@ def batchify_stop(data, max_len=100,start_id=4,stop_id=5): #max_len cutout defin
         # batch[i, s.shape[0]:] = 3
     return Variable(torch.from_numpy(batch)).cuda()
 
-class Vocab():
-    def __init__(self):
-        self.word_list = [PAD, UNK, KEEP, DEL, START, STOP]
-        self.w2i = {}
-        self.i2w = {}
-        self.count = 0
-        self.embedding = None
-
-    def add_vocab_from_file(self, vocab_file="../vocab_data/vocab.txt",vocab_size=30000):
-        with open(vocab_file, "rb") as f:
-            for i,line in enumerate(f):
-                if i >=vocab_size:
-                    break
-                self.word_list.append(line.split()[0])  # only want the word, not the count
-        print("read %d words from vocab file" % len(self.word_list))
-
-        for w in self.word_list:
-            self.w2i[w] = self.count
-            self.i2w[self.count] = w
-            self.count += 1
-
-    def add_embedding(self, gloveFile="path_for_glove_embedding", embed_size=100):
-        print("Loading Glove embeddings")
-        with open(gloveFile, 'r') as f:
-            model = {}
-            w_set = set(self.word_list)
-            embedding_matrix = np.zeros(shape=(len(self.word_list), embed_size))
-
-            for line in f:
-                splitLine = line.split()
-                word = splitLine[0]
-                if word in w_set:  # only extract embeddings in the word_list
-                    embedding = np.array([float(val) for val in splitLine[1:]])
-                    model[word] = embedding
-                    embedding_matrix[self.w2i[word]] = embedding
-                    # if len(model) % 1000 == 0:
-                        # print("processed %d vocab_data" % len(model))
-        self.embedding = embedding_matrix
-        print("%d words out of %d has embeddings in the glove file" % (len(model), len(self.word_list)))
-
-class POSvocab():
-    def __init__(self,vocab_path):
-        self.word_list = [PAD,UNK,START,STOP]
-        self.w2i = {}
-        self.i2w = {}
-        self.count = 0
-        self.embedding = None
-        with open(vocab_path+'postag_set.p','r') as f:
-            # postag_set is from NLTK
-            tagdict = pickle.load(f)
-
-        for w in self.word_list:
-            self.w2i[w] = self.count
-            self.i2w[self.count] = w
-            self.count += 1
-
-        for w in tagdict:
-            self.w2i[w] = self.count
-            self.i2w[self.count] = w
-            self.count += 1
 
 class Datachunk():
     def __init__(self,data_path):
@@ -220,7 +160,7 @@ def prepare_batch(batch_df,vocab, max_length=100):
         """
     inp = batchify_stop(batch_df['comp_ids'], max_len=max_length)
     inp_pos = batchify_stop(batch_df['comp_pos_ids'], max_len=max_length)
-    inp_simp=batchify_start_stop(batch_df['simp_id'], max_len=max_length)
+    inp_simp=batchify_start_stop(batch_df['simp_ids'], max_len=max_length)
     # tgt = batchify_start_stop(batch_df['edit_ids'], max_len=max_length)  # edit ids has early stop
     tgt = batchify_start_stop(batch_df['new_edit_ids'], max_len=max_length)  # new_edit_ids do not do early stopping
     # I think new edit ids do not ave early stopping

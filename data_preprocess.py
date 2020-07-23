@@ -1,8 +1,9 @@
 import os
 import numpy as np
 import pandas as pd
-import data
-from nltk import pos_tag
+#import data
+#from nltk import pos_tag
+import spacy
 from label_edits import sent2edit
 
 # This script contains the reimplementation of the pre-process steps of the dataset
@@ -15,6 +16,15 @@ KEEP = 'KEEP' # This has a vocab id, which is used for copying from the source [
 DEL = 'DEL' # This has a vocab id, which is used for deleting the corresponding word [3]
 START = 'START' # this has a vocab id, which is uded for indicating start of the sentence for decoding [4]
 STOP = 'STOP' # This has a vocab id, which is used to stop decoding [5]
+
+class SpacyTag:
+    def __init__(self, model = 'en'):
+        self.nlp = spacy.load(model)
+        self.tokenizer = self.nlp.Defaults.create_tokenizer(self.nlp)
+    def pos_tag(self, sent):
+        return [(token.text, token.pos_) for token in self.nlp(" ".join(sent))]
+    def tokenize(self, sent):
+        return [token.text for token in self.tokenizer(" ".join(sent))]
 
 def remove_lrb(sent_string):
     # sent_string = sent_string.lower()
@@ -35,16 +45,15 @@ def replace_lrb(sent_string):
     return new_sent
 
 
-def process_raw_data(comp_txt, simp_txt):
+def process_raw_data(comp_txt, simp_txt, pos_vocab):
     comp_txt = [line.lower().split() for line in comp_txt]
     simp_txt = [line.lower().split() for line in simp_txt]
+    comp_txt,simp_txt=zip(*[(i[0],i[1]) for i in zip(comp_txt,simp_txt) if i[0] != i[1]])
+
     # df_comp = pd.read_csv('data/%s_comp.csv'%dataset,  sep='\t')
     # df_simp= pd.read_csv('data/%s_simp.csv'%dataset,  sep='\t')
     assert len(comp_txt) == len(simp_txt)
-    df = pd.DataFrame(
-                        {'comp_tokens': comp_txt,
-                         'simp_tokens': simp_txt,
-                        })
+    df = pd.DataFrame()
     def add_edits(df):
         """
         :param df: a Dataframe at least contains columns of ['comp_tokens', 'simp_tokens']
@@ -53,29 +62,39 @@ def process_raw_data(comp_txt, simp_txt):
         comp_sentences = df['comp_tokens'].tolist()
         simp_sentences = df['simp_tokens'].tolist()
         pair_sentences = list(zip(comp_sentences,simp_sentences))
-
+        print("Generating edits ...", end='', flush = True)
         edits_list = [sent2edit(l[0],l[1]) for l in pair_sentences] # transform to edits based on comp_tokens and simp_tokens
+        print("done")
         df['edit_labels'] = edits_list
         return df
 
-    def add_pos(df):
-        src_sentences = df['comp_tokens'].tolist()
-        pos_sentences = [pos_tag(sent) for sent in src_sentences]
+    def add_pos(df, src_sentences, pos_vocab, spacy):
+        print("POS tagging:", end='', flush = True)
+        comp_sentences = []
+        pos_sentences = []
+        for i, sent in enumerate(src_sentences):
+            if not i % 10000:
+                print(' {}'.format(i), end=' ', flush = True)
+            pos_sentence = spacy.pos_tag(sent)
+            comp_sentences.append([x[0] for x in pos_sentence])
+            pos_sentences.append(pos_sentence)
+        print('done')
+        df['comp_tokens'] = comp_sentences
         df['comp_pos_tags'] = pos_sentences
-
-        pos_vocab = data.POSvocab()
         pos_ids_list = []
-        for sent in pos_sentences:
-            pos_ids = [pos_vocab.w2i[w[1]] if w[1] in pos_vocab.w2i.keys() else pos_vocab.w2i[UNK] for w in sent]
+        for i,psent in enumerate(pos_sentences):
+            pos_ids = [pos_vocab.w2i[w[1]] if w[1] in pos_vocab.w2i.keys() else pos_vocab.w2i[UNK] for w in psent]
             pos_ids_list.append(pos_ids)
         df['comp_pos_ids'] = pos_ids_list
         return df
 
-    df = add_pos(df)
+    spacy = SpacyTag()
+    df['simp_tokens'] = [spacy.tokenize(x) for x in simp_txt]
+    df = add_pos(df, comp_txt, pos_vocab, spacy)
     df = add_edits(df)
     return df
 
-def editnet_data_to_editnetID(df,output_path):
+def editnet_data_to_editnetID(df,vocab, output_path):
     """
     this function reads from df.columns=['comp_tokens', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids']
     and add vocab ids for comp_tokens, simp_tokens, and edit_labels
@@ -86,8 +105,6 @@ def editnet_data_to_editnetID(df,output_path):
                                             'comp_pos_tags','comp_pos_ids'])
     """
     out_list = []
-    vocab = data.Vocab()
-    vocab.add_vocab_from_file('./vocab_data/vocab.txt', 30000)
 
     def prepare_example(example, vocab):
         """
@@ -100,8 +117,8 @@ def editnet_data_to_editnetID(df,output_path):
         edit_id = np.array([vocab.w2i[i] if i in vocab.w2i.keys() else vocab.w2i[UNK] for i in example['edit_labels']])
         return comp_id, simp_id, edit_id  # add a dimension for batch, batch_size =1
 
+    print("Writing pandas dataframe ... ", end='', flush = True)
     for i,example in df.iterrows():
-        print(i)
         comp_id, simp_id, edit_id = prepare_example(example,vocab)
         ex=[example['comp_tokens'], comp_id,
          example['simp_tokens'], simp_id,
@@ -113,3 +130,4 @@ def editnet_data_to_editnetID(df,output_path):
                                             'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids'])
     outdf.to_pickle(output_path)
     print('saved to %s'%output_path)
+    return outdf
