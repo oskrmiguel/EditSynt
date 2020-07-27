@@ -1,4 +1,6 @@
+import os
 import pickle
+import numpy as np
 
 PAD = 'PAD' #  This has a vocab id, which is used to represent out-of-vocabulary words [0]
 UNK = 'UNK' #  This has a vocab id, which is used to represent out-of-vocabulary words [1]
@@ -35,15 +37,21 @@ class Vocab():
             self.i2w[self.count] = w
             self.count += 1
 
-    def add_embedding(self, gloveFile="path_for_glove_embedding", embed_size=100):
+    def add_embedding(self, gloveFile):
         print("Loading Glove embeddings")
-        with open(gloveFile, 'r') as f:
+        with open(gloveFile, 'r', encoding='utf-8', errors='surrogateescape') as f:
             model = {}
             w_set = set(self.word_list)
-            embedding_matrix = np.zeros(shape=(len(self.word_list), embed_size))
-
+            first_line = True
             for line in f:
-                splitLine = line.split()
+                splitLine = line.strip().split(' ')
+                if first_line:
+                    embed_size = len(splitLine) - 1
+                    if embed_size == 1:
+                        # fastext and skipgram have a first line wih N, dim
+                        continue
+                    embedding_matrix = np.zeros(shape=(len(self.word_list), embed_size))
+                    first_line = False
                 word = splitLine[0]
                 if word in w_set:  # only extract embeddings in the word_list
                     embedding = np.array([float(val) for val in splitLine[1:]])
@@ -53,15 +61,16 @@ class Vocab():
                         # print("processed %d vocab_data" % len(model))
         self.embedding = embedding_matrix
         print("%d words out of %d has embeddings in the glove file" % (len(model), len(self.word_list)))
+        return embed_size
 
 class POSvocab():
-    def __init__(self,vocab_path='vocab_data/'):
+    def __init__(self,vocab_file):
         self.word_list = [PAD,UNK,START,STOP]
         self.w2i = {}
         self.i2w = {}
         self.count = 0
         self.embedding = None
-        with open(vocab_path+'ptb_ud_tagset.txt') as f:
+        with open(vocab_file) as f:
             # postag_set is from NLTK
             tagdict = [l.strip() for l in f]
 

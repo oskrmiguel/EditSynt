@@ -108,7 +108,7 @@ class Datachunk():
             df = pd.read_pickle(self.data_path + self.listdir.pop())
 
             if shuffle:
-                df = df.sample(frac=1).reset_index(drop=True)
+                df = df.sample(frac=1, random_state=233).reset_index(drop=True)
                 print('shuffling the df')
 
             for index, row in df.iterrows():
@@ -120,7 +120,7 @@ class Datachunk():
             # print("reading a new chunk with %d chunks remaining" % len(self.listdir))
             df = pd.read_pickle(self.data_path + self.listdir.pop())
             if shuffle:
-                df = df.sample(frac=1).reset_index(drop=True)
+                df = df.sample(frac=1, random_state=233).reset_index(drop=True)
                 # print('shuffling the df')
 
             list_df = [df[i:i + batch_size] for i in range(0, df.shape[0], batch_size)]
@@ -139,11 +139,15 @@ class Dataset():
 
     def batch_generator(self, batch_size=64, shuffle=True):
         if shuffle:
-            self.df = self.df.sample(frac=1).reset_index(drop=True)
+            self.df = self.df.sample(frac=1, random_state=233).reset_index(drop=True)
             # print('shuffling the df')
 
         list_df = [self.df[i:i + batch_size] for i in range(0, self.df.shape[0], batch_size)]
         for df in list_df:
+            # if self.idx_count == 0:
+            #     for i in range(0,min(len(df), 5)):
+            #         print("***Example {} ***".format(i))
+            #         print(df.iloc[i])
             self.idx_count += 1
             yield self.idx_count, df
 

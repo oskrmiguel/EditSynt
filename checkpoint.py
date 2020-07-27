@@ -54,7 +54,7 @@ class Checkpoint(object):
         """
         date_time = time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime())
 
-        self._path = os.path.join(experiment_dir, self.CHECKPOINT_DIR_NAME, date_time)
+        self._path = os.path.join(experiment_dir, self.CHECKPOINT_DIR_NAME)
         path = self._path
 
         if os.path.exists(path):

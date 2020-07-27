@@ -50,8 +50,9 @@ class EncoderRNN(nn.Module):
         else:
             self.embeddingPOS = embeddingPOS
 
+        #self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True, dropout=dropout)
         self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True)
-        self.drop = nn.Dropout(dropout)
+        #self.drop = nn.Dropout(dropout)
 
     def forward(self, inp, inp_pos, hidden):
         #inp and inp pose should be both sorted
@@ -415,6 +416,14 @@ class EditNTS(nn.Module):
 
 
     def forward(self,org,output,org_ids,org_pos,simp_sent,teacher_forcing_ratio=1.0):
+        """
+        Forward step.
+        :param org: original ids, sorted [org_ids_sorted, org_ids_lengths_sorted, tokids_sort_order]
+        :param output: editlabels_ids
+        :param org_ids: original sentence ids
+        :param org_pos: POS ids, sorted [posids_sorted, posids_length_sorted, posids_sort_order]
+        :param simp_sent: simple sentence ids
+        """
         def transform_hidden(hidden): #for bidirectional encoders
             h, c = hidden
             h = torch.cat([h[0], h[1]], dim=1)[None, :, :]

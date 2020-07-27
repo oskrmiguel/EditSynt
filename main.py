@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import os
 import argparse
 import collections
 import logging
@@ -83,8 +84,8 @@ def reweight_global_loss(w_add,w_keep,w_del):
     NLL_weight[DEL_ID] = w_del
     return NLL_weight
 
-def training(edit_net,nepochs, args, vocab, print_every=100, check_every=500):
-    eval_dataset = data.Dataset(args.data_path + 'val.df.filtered.pos') # load eval dataset
+def training(edit_net,nepochs, args, vocab):
+    eval_dataset = data.Dataset(os.path.join(args.data_dir, 'val.df.filtered.pos')) # load eval dataset
     evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'))
     editnet_optimizer = torch.optim.Adam(edit_net.parameters(),
                                           lr=1e-3, weight_decay=1e-6)
@@ -97,16 +98,16 @@ def training(edit_net,nepochs, args, vocab, print_every=100, check_every=500):
     # editnet_criterion = nn.NLLLoss(weight=NLL_weight_t, ignore_index=vocab.w2i['PAD'], reduce=False)
     editnet_criterion = nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none')
 
-    best_eval_loss = 0. # init statistics
+    best_eval_loss = 999 # init statistics
     print_loss = []  # Reset every print_every
 
     for epoch in range(nepochs):
         # scheduler.step()
         #reload training for every epoch
-        if os.path.isfile(args.data_path+'train.df.filtered.pos'):
-            train_dataset = data.Dataset(args.data_path + 'train.df.filtered.pos')
+        if os.path.isfile(os.path.join(args.data_dir, 'train.df.filtered.pos')):
+            train_dataset = data.Dataset(os.path.join(args.data_dir, 'train.df.filtered.pos'))
         else:  # iter chunks and vocab_data
-            train_dataset = data.Datachunk(args.data_path + 'train.df.filtered.pos')
+            train_dataset = data.Datachunk(os.path.join(args.data_dir, 'train.df.filtered.pos'))
 
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
 
@@ -145,46 +146,58 @@ def training(edit_net,nepochs, args, vocab, print_every=100, check_every=500):
             torch.nn.utils.clip_grad_norm_(edit_net.parameters(), 1.)
             editnet_optimizer.step()
 
-            if i % print_every == 0:
+            if i % args.print_every == 0:
                 log_msg = 'Epoch: %d, Step: %d, Loss: %.4f' % (
                     epoch,i, np.mean(print_loss))
                 print_loss = []
                 print(log_msg)
 
                 # Checkpoint
-            if i % check_every == 0:
+            if i % args.check_every == 0:
                 edit_net.eval()
 
+                # import cProfile, pstats, io
+                # pr = cProfile.Profile()
+                # pr.enable()
                 val_loss, bleu_score, sari, sys_out = evaluator.evaluate(eval_dataset, vocab, edit_net,args)
+                # pr.disable()
+                # s = io.StringIO()
+                # sortby = 'cumulative'
+                # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                # ps.print_stats()
+                # print(s.getvalue())
                 log_msg = "epoch %d, step %d, Dev loss: %.4f, Bleu score: %.4f, Sari: %.4f \n" % (epoch, i, val_loss, bleu_score, sari)
                 print(log_msg)
 
                 if val_loss < best_eval_loss:
                     best_eval_loss = val_loss
-                Checkpoint(model=edit_net,
-                           opt=editnet_optimizer,
-                           epoch=epoch, step=i,
-                           ).save(args.store_dir)
+                    Checkpoint(model=edit_net,
+                               opt=editnet_optimizer,
+                               epoch=epoch, step=i,
+                    ).save(args.store_dir)
                 print("checked after %d steps"%i)
 
                 edit_net.train()
     return edit_net
 
-dataset='newsela'
 def main():
     torch.manual_seed(233)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', type=str,dest='data_path',
-                        default='/home/ml/ydong26/data/EditNTS_data/editnet_data/%s/'%dataset,
-                        help='Path to train vocab_data')
+    parser.add_argument('--data_dir', type=str,dest='data_dir',
+                        help='Directory with train/val data.')
     parser.add_argument('--store_dir', action='store', dest='store_dir',
-                        default='/home/ml/ydong26/tmp_store/editNTS_%s'%dataset,
-                        help='Path to exp storage directory.')
-    parser.add_argument('--vocab_path', type=str, dest='vocab_path',
-                        default='../vocab_data/',
-                        help='Path contains vocab, embedding, postag_set')
+                        help='Path to store models.')
+    parser.add_argument('--postag_file', type=str, dest='postag_file',
+                        default='vocab_path/ptb_ud_tagset.txt',
+                        help='POS tag set file.')
+    parser.add_argument('--embed_file', type=str, dest='embed_file',
+                        default='vocab_path/glove.6B.100d.txt',
+                        help='Embedding file.')
+    parser.add_argument('--vocab_file', type=str, dest='vocab_file',
+                        default=None,
+                        help='Vocabulary file')
     parser.add_argument('--load_model', type=str, dest='load_model',
                         default=None,
                         help='Path for loading pre-trained model for further training')
@@ -192,6 +205,10 @@ def main():
     parser.add_argument('--vocab_size', dest='vocab_size', default=30000, type=int)
     parser.add_argument('--batch_size', dest='batch_size', default=32, type=int)
     parser.add_argument('--max_seq_len', dest='max_seq_len', default=100)
+    parser.add_argument('--check_every', dest='check_every', default=500,
+                        help='Number of batches until next validation check (and model saving)')
+    parser.add_argument('--print_every', dest='print_every', default=100,
+                        help='Number of batches until information is printed.')
 
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--hidden', type=int, default=200)
@@ -202,14 +219,15 @@ def main():
     #train_file = '/media/vocab_data/yue/TS/editnet_data/%s/train.df.filtered.pos'%dataset
     # test='/media/vocab_data/yue/TS/editnet_data/%s/test.df.pos' % args.dataset
     args = parser.parse_args()
-    torch.cuda.set_device(args.device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #torch.cuda.set_device(args.device)
 
-            # load vocab-related files and init vocab
+    # load vocab-related files and init vocab
     print('*'*10)
     vocab = vocabulary.Vocab()
-    vocab.add_vocab_from_file(args.vocab_path+'vocab.txt', args.vocab_size)
-    vocab.add_embedding(gloveFile=args.vocab_path+'glove.6B.100d.txt')
-    pos_vocab = vocabulary.POSvocab(args.vocab_path) #load pos-tags embeddings
+    vocab.add_vocab_from_file(args.vocab_file, args.vocab_size)
+    word_embed_size = vocab.add_embedding(gloveFile=args.embed_file)
+    pos_vocab = vocabulary.POSvocab(args.postag_file) #load pos-tags embeddings
     print('*' * 10)
 
     print(args)
@@ -223,7 +241,7 @@ def main():
     )
     hps = hyperparams(
         vocab_size=vocab.count,
-        embedding_dim=100,
+        embedding_dim=word_embed_size,
         word_hidden_units=args.hidden,
         sent_hidden_units=args.hidden,
         pretrained_embedding=vocab.embedding,
