@@ -137,7 +137,7 @@ class Dataset():
         for index, row in self.df.iterrows():
             yield index, row
 
-    def batch_generator(self, batch_size=64, shuffle=True):
+    def batch_generator(self, batch_size, shuffle=True):
         if shuffle:
             self.df = self.df.sample(frac=1, random_state=233).reset_index(drop=True)
             # print('shuffling the df')

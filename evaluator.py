@@ -44,9 +44,9 @@ class Evaluator():
         ter = 0.
         sari_list = []
         sys_out=[]
-
+        batch_size = self.batch_size
         print('Doing tokenized evaluation')
-        for i, batch_df in dataset.batch_generator(batch_size=self.batch_size, shuffle=False):
+        for i, batch_df in dataset.batch_generator(batch_size=batch_size, shuffle=False):
             model.eval()
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len)  # comp,scpn,simp
 
@@ -80,7 +80,7 @@ class Evaluator():
                 loss_tf = compute_loss(output_teacher_forcing,tar_flat)
                 print_loss_tf.append(loss_tf.item())
 
-            continue # AITOR: do not compute sari/blue on development. Too slow.
+            #continue # AITOR: do not compute sari/blue on development. Too slow.
             output_without_teacher_forcing = model(org, out, org_ids, org_pos, simp_ids,0.0) #can't compute loss for this one, can only do teacher forcing
             # the SARI and BLUE is computed based on model.eval without teacher forcing
             for j in range(output_without_teacher_forcing.size()[0]):
