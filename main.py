@@ -193,6 +193,18 @@ def training(edit_net,nepochs, args, vocab):
                 edit_net.train()
     return edit_net
 
+def evaluation(infile, edit_net, args, vocab, outfile):
+    edit_net.eval()
+    eval_dataset = data.Dataset(infile) # load eval dataset
+    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size)
+    val_loss, bleu_score, sari, sys_out = evaluator.evaluate(eval_dataset, vocab, edit_net, args)
+    print("Bleu score: {:.4f}, Sari: {:.4f}".format(bleu_score, sari))
+    if outfile is not None:
+        print('Writing output in {}'.format(outfile))
+        with open(outfile, "w",encoding="utf-8") as f:
+            f.write('\n'.join(sys_out))
+            f.write('\n')
+
 def main():
     torch.manual_seed(233)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
@@ -215,6 +227,10 @@ def main():
                         default=None,
                         help='Path for loading pre-trained model for further training')
 
+    parser.add_argument('--eval_input', dest='eval_input', type=str, default=None,
+                        help='Input file to evaluate.')
+    parser.add_argument('--eval_output', dest='eval_output', type=str, default=None,
+                        help='If --eval_input, where to store system output. If null, do not store')
     parser.add_argument('--vocab_size', dest='vocab_size', default=30000, type=int)
     parser.add_argument('--batch_size', dest='batch_size', default=32, type=int)
     parser.add_argument('--max_seq_len', dest='max_seq_len', default=100)
@@ -233,6 +249,11 @@ def main():
     #train_file = '/media/vocab_data/yue/TS/editnet_data/%s/train.df.filtered.pos'%dataset
     # test='/media/vocab_data/yue/TS/editnet_data/%s/test.df.pos' % args.dataset
     args = parser.parse_args()
+
+    if args.eval_input and args.load_model is None:
+        print("Can't --eval_input without a pretrained model")
+        exit(1)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(args.device)
 
@@ -277,7 +298,10 @@ def main():
         edit_net.cuda()
         edit_net.train()
 
-    training(edit_net, args.epochs, args, vocab)
+    if args.eval_input is not None:
+        evaluation(args.eval_input, edit_net, args, vocab, args.eval_output)
+    else:
+        training(edit_net, args.epochs, args, vocab)
 
 
 if __name__ == '__main__':
