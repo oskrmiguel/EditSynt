@@ -86,7 +86,7 @@ def reweight_global_loss(w_add,w_keep,w_del):
 
 def training(edit_net,nepochs, args, vocab):
     eval_dataset = data.Dataset(os.path.join(args.data_dir, 'val.df.filtered.pos')) # load eval dataset
-    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'))
+    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size)
     editnet_optimizer = torch.optim.Adam(edit_net.parameters(),
                                           lr=1e-3, weight_decay=1e-6)
     # scheduler = MultiStepLR(abstract_optimizer, milestones=[20,30,40], gamma=0.1)
@@ -99,6 +99,7 @@ def training(edit_net,nepochs, args, vocab):
     editnet_criterion = nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none')
 
     best_eval_loss = 999 # init statistics
+    best_eval_sari = 0
     print_loss = []  # Reset every print_every
 
     for epoch in range(nepochs):
@@ -169,7 +170,19 @@ def training(edit_net,nepochs, args, vocab):
                 log_msg = "epoch %d, step %d, Dev loss: %.4f, Bleu score: %.4f, Sari: %.4f \n" % (epoch, i, val_loss, bleu_score, sari)
                 print(log_msg)
 
-                if val_loss < best_eval_loss:
+                # if val_loss < best_eval_loss:
+                #     best_eval_loss = val_loss
+                #     Checkpoint(model=edit_net,
+                #                opt=editnet_optimizer,
+                #                epoch=epoch, step=i,
+                #     ).save(args.store_dir)
+                if args.best_sari and sari > best_eval_sari:
+                    best_eval_sari = sari
+                    Checkpoint(model=edit_net,
+                               opt=editnet_optimizer,
+                               epoch=epoch, step=i,
+                    ).save(args.store_dir)
+                elif not args.best_sari and val_loss < best_eval_loss:
                     best_eval_loss = val_loss
                     Checkpoint(model=edit_net,
                                opt=editnet_optimizer,
@@ -213,6 +226,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--hidden', type=int, default=200)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--best_sari', action="store_true", help='Select model according to best sari in dev.')
     parser.add_argument('--device', type=int, default=1,
                         help='select GPU')
 
