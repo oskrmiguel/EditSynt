@@ -34,7 +34,7 @@ files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/
 ['train', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.dst'],
 ['dev', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.dst']]
 
-#files = [['all', 't1', 't2']]
+#files = [['t_all', 't1', 't2']]
 
 out ='data/wikilarge_dep'
 vocab_file = os.path.join(out,"vocab.txt")
@@ -47,7 +47,7 @@ pos_vocab = vocabulary.POSvocab('vocab_data/ptb_ud_tagset.txt')
 
 for split,c,s in files:
     print('Processing ', split)
-    do_file(c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.dep".format(split)), lang)
+    do_file(c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.pos".format(split)), lang)
 
 # split 90% train, 10% val
 # train=df.sample(frac=0.9,random_state=233) #random state is a seed value
