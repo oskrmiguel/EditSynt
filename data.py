@@ -6,6 +6,7 @@ import struct
 import csv
 import pandas as pd
 import numpy as np
+import scipy.sparse as sp
 import os
 import torch
 from torch.autograd import Variable
@@ -47,7 +48,6 @@ def id2edits(ids,vocab):
     #     """
     edit_list = [vocab.i2w[i] for i in ids]
     return edit_list
-
 
 def batchify(data, max_len=100): #max_len cutout defined by human
     bsz = len(data)
@@ -94,6 +94,17 @@ def batchify_stop(data, max_len=100,start_id=4,stop_id=5): #max_len cutout defin
         # batch[i, s.shape[0]:] = 3
     return Variable(torch.from_numpy(batch)).cuda()
 
+def batchify_adj(rows, cols, tokens, max_len):
+    max_n = max([s.shape[0] for s in tokens]) + 1
+    max_len = min(max_n, max_len)
+    adjs = []
+    # for i, r in enumerate(rows):
+    #     c = cols[i]
+    for r,c in zip(rows, cols):
+        adj = sp.coo_matrix((np.ones(r.shape[0]), (r, c)),
+                            shape=(max_n, max_n), dtype=np.float32)
+        adjs.append(adj.toarray()[:max_len, :max_len])
+    return Variable(torch.from_numpy(np.array(adjs)).float()).cuda()
 
 class Datachunk():
     def __init__(self,data_path):
@@ -158,6 +169,7 @@ def prepare_batch(batch_df,vocab, max_length=100):
         :param vocab: vocab object for translation
         :return: inp: original input sentences
         :return: inp_pos: pos-tag ids for the input sentences
+        :return: adj: adjacency matrices of dependency trees from complex sentences
         :return: tgt: the target edit-labels in ids
         :return: inp_simp:the corresponding simple sentences in ids
         :return: batch_df['comp_tokens']:the complex tokens
@@ -168,9 +180,5 @@ def prepare_batch(batch_df,vocab, max_length=100):
     # tgt = batchify_start_stop(batch_df['edit_ids'], max_len=max_length)  # edit ids has early stop
     tgt = batchify_start_stop(batch_df['new_edit_ids'], max_len=max_length)  # new_edit_ids do not do early stopping
     # I think new edit ids do not ave early stopping
-    return [inp, inp_pos, tgt,inp_simp], batch_df['comp_tokens']
-
-
-
-
-
+    adj = batchify_adj(batch_df['comp_dep_rows'], batch_df['comp_dep_cols'], batch_df['comp_ids'], max_len=max_length)
+    return [inp, inp_pos, adj, tgt, inp_simp], batch_df['comp_tokens']

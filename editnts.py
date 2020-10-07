@@ -13,6 +13,8 @@ import data
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
+from edgcn import GraphConvolution
+
 MAX_LEN =100
 
 PAD = 'PAD' #  This has a vocab id, which is used to represent out-of-vocabulary words [0]
@@ -52,9 +54,11 @@ class EncoderRNN(nn.Module):
 
         #self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True, dropout=dropout)
         self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True)
+        self.gcn = GraphConvolution(2*hidden_size, 2*hidden_size)
         #self.drop = nn.Dropout(dropout)
 
-    def forward(self, inp, inp_pos, hidden):
+    def forward(self, inp, inp_pos, adj, hidden):
+
         #inp and inp pose should be both sorted
         inp_sorted=inp[0]
         inp_lengths_sorted=inp[1]
@@ -77,8 +81,9 @@ class EncoderRNN(nn.Module):
         h_unsorted=unsort(encoder_final[0], inp_sort_order)
         c_unsorted=unsort(encoder_final[1], inp_sort_order)
 
+        gcn_out = self.gcn(memory_bank.transpose(0,1), adj)
 
-        return memory_bank.transpose(0,1), (h_unsorted,c_unsorted)
+        return gcn_out, (h_unsorted,c_unsorted)
 
     def initHidden(self, bsz):
         weight = next(self.parameters()).data
@@ -414,7 +419,7 @@ class EditNTS(nn.Module):
                                       n_layers, self.embedding)
 
 
-    def forward(self,org,output,org_ids,org_pos,simp_sent,teacher_forcing_ratio=1.0):
+    def forward(self,org,output,org_ids,org_pos,adj,simp_sent,teacher_forcing_ratio=1.0):
         """
         Forward step.
         :param org: original ids, sorted [org_ids_sorted, org_ids_lengths_sorted, tokids_sort_order]
@@ -430,7 +435,7 @@ class EditNTS(nn.Module):
             hidden = (h, c)
             return hidden
         hidden_org = self.encoder1.initHidden(org[0].size(0))
-        encoder_outputs_org, hidden_org = self.encoder1(org,org_pos,hidden_org)
+        encoder_outputs_org, hidden_org = self.encoder1(org, org_pos, adj, hidden_org)
         hidden_org = transform_hidden(hidden_org)
 
         logp, _ = self.decoder(output, hidden_org, encoder_outputs_org,org_ids,simp_sent,teacher_forcing_ratio)

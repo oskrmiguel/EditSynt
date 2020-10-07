@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 #import data
 #from nltk import pos_tag
 import spacy
@@ -34,17 +35,69 @@ class Spacy:
             sent = " ".join(sent)
         return [token.text for token in self.tokenizer(sent)]
 
-    def _tree2str(self, root):
-        str = ''
+    def _dep2str(self, root, dep):
+        str = '({}:{}'.format(dep, root.text)
         for child in root.children:
-            str += '({}:{}'.format(child.dep_, child.text) + self._tree2str(child)
+            str += self._dep2str(child, child.dep_)
         str += ')'
         return str
 
-    def tree2str(self, doc):
-        'Create a parse string from a analyzed sentence'
+    def dep2str(self, doc):
+        'Create a parse string from a analyzed dependency tree'
         root = [token for token in doc if token.head == token][0]
-        return '(root:{}'.format(root.text) + self._tree2str(root) + ')'
+        return self._dep2str(root, 'root')
+
+################## tree2graph
+
+def parse_tree(tree, comp_tokens):
+
+    def parse_node(node):
+        i = node.find(':')
+        if i == -1:
+            return node, ''
+        return node[i+1:], node[:i]
+
+    token_map = {x: i for i, x in enumerate(comp_tokens)}
+    node_map = dict()
+    parents = []
+    pstack = []
+    node = ""
+    # ret_exp = ""
+    for char in tree:
+        if char == ' ':
+            continue
+        if char not in ('(', ')'):
+            node += char
+            continue
+        if node:
+            node_name, node_type = parse_node(node)
+            counter = token_map.get(node_name, None)
+            if counter is None:
+                # ERROR
+                print('WARNING: token {} not in sentence\n{}'.format(node_name, " ".join(comp_tokens)))
+                counter = -1
+            else:
+                node_map[counter] = {'name': node_name, 'type': node_type, 'idx': counter}
+                # ret_exp += str(counter)
+                parents.append([counter, counter]) # self loop
+                if pstack and pstack[-1] != -1:
+                    parents.append([pstack[-1], counter])
+            pstack.append(counter)
+        if char == ')':
+            pstack.pop()
+        # ret_exp += char
+        node = ""
+    return node_map, parents
+
+def tree2adj(tree, comp_tokens):
+    tree_map, parents = parse_tree(tree, comp_tokens)
+    N = len(comp_tokens)
+    edges = np.array(parents, dtype=np.int32)
+    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])),
+                        shape=(N, N), dtype=np.float32)
+    return adj
+
+######################
 
 def remove_lrb(sent_string):
     # sent_string = sent_string.lower()
@@ -93,19 +146,27 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang):
         comp_sentences = []
         pos_sentences = []
         dep_sentences = []
+        dep_sentences_rows = []
+        dep_sentences_cols = []
         for i, sent in enumerate(src_sentences):
             if not i % 10000:
                 print(' {}'.format(i), end=' ', flush = True)
             spacy_doc = spacy.analize(sent)
             pos_sentence = [(token.text, token.pos_) for token in spacy_doc]
-            tree_str = spacy.tree2str(spacy_doc)
-            comp_sentences.append([x[0] for x in pos_sentence])
+            tree_str = spacy.dep2str(spacy_doc)
+            comp_sentence = [x[0] for x in pos_sentence]
+            adj = tree2adj(tree_str, comp_sentence)
+            comp_sentences.append(comp_sentence)
             pos_sentences.append(pos_sentence)
             dep_sentences.append(tree_str)
+            dep_sentences_rows.append(adj.row)
+            dep_sentences_cols.append(adj.col)
         print('done')
         df['comp_tokens'] = comp_sentences
         df['comp_pos_tags'] = pos_sentences
         df['comp_dep_tree'] = dep_sentences
+        df['comp_dep_rows'] = dep_sentences_rows
+        df['comp_dep_cols'] = dep_sentences_cols
         pos_ids_list = []
         for i,psent in enumerate(pos_sentences):
             pos_ids = [pos_vocab.w2i[w[1]] if w[1] in pos_vocab.w2i.keys() else pos_vocab.w2i[UNK] for w in psent]
@@ -127,7 +188,8 @@ def editnet_data_to_editnetID(df,vocab, output_path):
     :param output_path: the path to store the df
     :return: a dataframe with df.columns=['comp_tokens', 'simp_tokens', 'edit_labels',
                                             'comp_ids','simp_id','edit_ids',
-                                            'comp_pos_tags','comp_pos_ids', 'comp_dep_tree'])
+                                            'comp_pos_tags','comp_pos_ids',
+                                            'comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
     """
     out_list = []
 
@@ -149,11 +211,12 @@ def editnet_data_to_editnetID(df,vocab, output_path):
             example['simp_tokens'], simp_id,
             example['edit_labels'], edit_id,
             example['comp_pos_tags'],example['comp_pos_ids'],
-            example['comp_dep_tree']
+            example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']
          ]
         out_list.append(ex)
     outdf = pd.DataFrame(out_list, columns=['comp_tokens','comp_ids', 'simp_tokens','simp_ids',
-                                            'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids','comp_dep_tree'])
+                                            'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids',
+                                            'comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
     outdf.to_pickle(output_path)
     print('saved to %s'%output_path)
     return outdf

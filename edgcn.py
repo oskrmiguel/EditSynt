@@ -1,51 +1,9 @@
 import math
 
-import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
-
-def parse_tree(tree):
-    def parse_node(node):
-        i = node.find(':')
-        if i == -1:
-            return node, ''
-        return node[i+1:], node[:i]
-    node_map = dict()
-    parent = dict()
-    pstack = [0]
-    counter = 0
-    node = ""
-    # ret_exp = ""
-    for char in tree:
-        if char in ('(', ')'):
-            if node:
-                node_name, node_type = parse_node(node)
-                node_map[counter] = {'name': node_name, 'type': node_type, 'idx': counter}
-                # ret_exp += str(counter)
-                parent[counter] = pstack[-1]
-                pstack.append(counter)
-                counter += 1
-            if char == ')':
-                pstack.pop()
-            # ret_exp += char
-            node = ""
-        elif char == ' ':
-            continue
-        else:
-            node += char
-    return node_map, parent
-
-def process_tree(tree, wdim):
-    tree_map, parent = parse_tree(tree)
-    # print(tree_map)
-    # print(parent)
-    N = len(tree_map)
-    x = np.random.rand(N, wdim)
-    adj = np.identity(N)
-    for jj, i in parent.items():
-        adj[i][tree_map[jj]['idx']] = 1.0
-    return x, adj
 
 class GraphConvolution(Module):
     """
@@ -70,8 +28,8 @@ class GraphConvolution(Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input, adj):
-        support = torch.mm(input, self.weight)
-        output = torch.spmm(adj, support)
+        support = torch.matmul(input, self.weight)
+        output = torch.bmm(adj, support)
         if self.bias is not None:
             return output + self.bias
         else:
