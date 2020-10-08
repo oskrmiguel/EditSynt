@@ -58,12 +58,13 @@ class Evaluator():
             org_pos_lens = org_pos_ids.ne(0).sum(1)
             org_pos = sort_by_lens(org_pos_ids, org_pos_lens)  # inp=[inp_sorted, inp_lengths_sorted, inp_sort_order]
 
-            out = prepared_batch[2][:, :]
-            tar = prepared_batch[2][:, 1:]
-            simp_ids = prepared_batch[3]
+            adj = prepared_batch[2]
+            out = prepared_batch[3][:, :]
+            tar = prepared_batch[3][:, 1:]
+            simp_ids = prepared_batch[4]
 
             # best_seq_list = model.beamsearch(org, out,simp_ids, org_ids, org_pos, 5)
-            output_teacher_forcing = model(org, out, org_ids, org_pos,simp_ids, 1.0)
+            output_teacher_forcing = model(org, out, org_ids, org_pos, adj, simp_ids, 1.0)
 
             if True: # the loss on validation is computed based on teacher forcing
                 ##################calculate loss
@@ -81,7 +82,7 @@ class Evaluator():
                 print_loss_tf.append(loss_tf.item())
 
             #continue # AITOR: do not compute sari/blue on development. Too slow.
-            output_without_teacher_forcing = model(org, out, org_ids, org_pos, simp_ids,0.0) #can't compute loss for this one, can only do teacher forcing
+            output_without_teacher_forcing = model(org, out, org_ids, org_pos, adj, simp_ids, 0.0) #can't compute loss for this one, can only do teacher forcing
             # the SARI and BLUE is computed based on model.eval without teacher forcing
             for j in range(output_without_teacher_forcing.size()[0]):
                 ## write beam search here

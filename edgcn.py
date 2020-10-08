@@ -41,10 +41,10 @@ class GraphConvolution(Module):
                + str(self.out_features) + ')'
 
 class EdGCN(Module):
-    def __init__(self, wdim, dropout=0.5):
+    def __init__(self, hidden_size, dropout=0.5):
         super(EdGCN, self).__init__()
-        self.gc1 = GraphConvolution(wdim, wdim)
-        self.gc2 = GraphConvolution(wdim, wdim)
+        self.gc1 = GraphConvolution(hidden_size, hidden_size)
+        self.gc2 = GraphConvolution(hidden_size, hidden_size)
         self.dropout = dropout
 
     def forward(self, x, adj):

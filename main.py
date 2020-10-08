@@ -131,7 +131,7 @@ def training(edit_net,nepochs, args, vocab):
             simp_ids = prepared_batch[4]
 
             editnet_optimizer.zero_grad()
-            output = edit_net(org, out, org_ids, org_pos,adj, simp_ids)
+            output = edit_net(org, out, org_ids, org_pos, adj, simp_ids)
             ##################calculate loss
             tar_lens = tar.ne(0).sum(1).float()
             tar_flat=tar.contiguous().view(-1)

@@ -13,7 +13,7 @@ import data
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
-from edgcn import GraphConvolution
+from edgcn import EdGCN
 
 MAX_LEN =100
 
@@ -54,7 +54,7 @@ class EncoderRNN(nn.Module):
 
         #self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True, dropout=dropout)
         self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True)
-        self.gcn = GraphConvolution(2*hidden_size, 2*hidden_size)
+        self.gcn = EdGCN(2*hidden_size)
         #self.drop = nn.Dropout(dropout)
 
     def forward(self, inp, inp_pos, adj, hidden):
