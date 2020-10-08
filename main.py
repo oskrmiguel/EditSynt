@@ -234,9 +234,9 @@ def main():
     parser.add_argument('--vocab_size', dest='vocab_size', default=30000, type=int)
     parser.add_argument('--batch_size', dest='batch_size', default=32, type=int)
     parser.add_argument('--max_seq_len', dest='max_seq_len', default=100)
-    parser.add_argument('--check_every', dest='check_every', default=500,
+    parser.add_argument('--check_every', dest='check_every', type=int, default=500,
                         help='Number of batches until next validation check (and model saving)')
-    parser.add_argument('--print_every', dest='print_every', default=100,
+    parser.add_argument('--print_every', dest='print_every', type=int, default=100,
                         help='Number of batches until information is printed.')
 
     parser.add_argument('--epochs', type=int, default=50)
