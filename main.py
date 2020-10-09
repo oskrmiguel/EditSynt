@@ -100,6 +100,9 @@ def training(edit_net,nepochs, args, vocab):
 
     best_eval_loss = 999 # init statistics
     best_eval_sari = 0
+    best_epoch = 0 # best epoch
+    best_checkN = 0 # best check
+    checkN = 0
     print_loss = []  # Reset every print_every
 
     for epoch in range(nepochs):
@@ -155,6 +158,7 @@ def training(edit_net,nepochs, args, vocab):
 
                 # Checkpoint
             if i % args.check_every == 0:
+                checkN += 1
                 edit_net.eval()
 
                 # import cProfile, pstats, io
@@ -177,19 +181,25 @@ def training(edit_net,nepochs, args, vocab):
                 #                epoch=epoch, step=i,
                 #     ).save(args.store_dir)
                 if args.best_sari and sari > best_eval_sari:
+                    best_epoch = epoch
+                    best_checkN = checkN
                     best_eval_sari = sari
                     Checkpoint(model=edit_net,
                                opt=editnet_optimizer,
                                epoch=epoch, step=i,
                     ).save(args.store_dir)
                 elif not args.best_sari and val_loss < best_eval_loss:
+                    best_epoch = epoch
+                    best_checkN = checkN
                     best_eval_loss = val_loss
                     Checkpoint(model=edit_net,
                                opt=editnet_optimizer,
                                epoch=epoch, step=i,
                     ).save(args.store_dir)
                 print("checked after %d steps"%i)
-
+                if args.early_stopping > 0 and (checkN - best_checkN) > args.early_stopping:
+                    print("Early stopping (best epoch is {})".format(best_epoch))
+                    return edit_net
                 edit_net.train()
     return edit_net
 
@@ -240,6 +250,7 @@ def main():
                         help='Number of batches until information is printed.')
 
     parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--early_stopping', type=int, default=0, help='Stop if measure in dev does not improve. Zero means no early stopping.')
     parser.add_argument('--hidden', type=int, default=200)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--best_sari', action="store_true", help='Select model according to best sari in dev.')
