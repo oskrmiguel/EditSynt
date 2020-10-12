@@ -116,7 +116,7 @@ def training(edit_net,nepochs, args, vocab):
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
 
             #     time1 = time.time()
-            prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len) #comp,scpn,simp
+            prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn) #comp,scpn,simp
 
             # a batch of complex tokens in vocab ids, sorted in descending order
             org_ids = prepared_batch[0]
@@ -127,11 +127,11 @@ def training(edit_net,nepochs, args, vocab):
             org_pos_lens = org_pos_ids.ne(0).sum(1)
             org_pos = sort_by_lens(org_pos_ids, org_pos_lens)
 
-            adj = prepared_batch[2]
-            out = prepared_batch[3][:, :]
-            tar = prepared_batch[3][:, 1:]
+            out = prepared_batch[2][:, :]
+            tar = prepared_batch[2][:, 1:]
 
-            simp_ids = prepared_batch[4]
+            simp_ids = prepared_batch[3]
+            adj = prepared_batch[4]
 
             editnet_optimizer.zero_grad()
             output = edit_net(org, out, org_ids, org_pos, adj, simp_ids)
@@ -237,6 +237,7 @@ def main():
     parser.add_argument('--load_model', type=str, dest='load_model',
                         default=None,
                         help='Path for loading pre-trained model for further training')
+    parser.add_argument('--do_gcn', action="store_true", help='Use GCN layer in encoder using dependency trees.')
 
     parser.add_argument('--eval_input', dest='eval_input', type=str, default=None,
                         help='Input file to evaluate.')
@@ -284,7 +285,7 @@ def main():
         ['vocab_size', 'embedding_dim',
          'word_hidden_units', 'sent_hidden_units',
          'pretrained_embedding', 'word2id', 'id2word',
-         'pos_vocab_size', 'pos_embedding_dim']
+         'pos_vocab_size', 'pos_embedding_dim', 'do_gcn']
     )
     hps = hyperparams(
         vocab_size=vocab.count,
@@ -295,7 +296,8 @@ def main():
         word2id=vocab.w2i,
         id2word=vocab.i2w,
         pos_vocab_size=pos_vocab.count,
-        pos_embedding_dim=30
+        pos_embedding_dim=30,
+        do_gcn=args.do_gcn
     )
 
     print('init editNTS model')

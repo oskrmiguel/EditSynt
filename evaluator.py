@@ -48,7 +48,7 @@ class Evaluator():
         print('Doing tokenized evaluation')
         for i, batch_df in dataset.batch_generator(batch_size=batch_size, shuffle=False):
             model.eval()
-            prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len)  # comp,scpn,simp
+            prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn)  # comp,scpn,simp
 
             org_ids = prepared_batch[0]
             org_lens = org_ids.ne(0).sum(1)
@@ -58,11 +58,10 @@ class Evaluator():
             org_pos_lens = org_pos_ids.ne(0).sum(1)
             org_pos = sort_by_lens(org_pos_ids, org_pos_lens)  # inp=[inp_sorted, inp_lengths_sorted, inp_sort_order]
 
-            adj = prepared_batch[2]
-            out = prepared_batch[3][:, :]
-            tar = prepared_batch[3][:, 1:]
-            simp_ids = prepared_batch[4]
-
+            out = prepared_batch[2][:, :]
+            tar = prepared_batch[2][:, 1:]
+            simp_ids = prepared_batch[3]
+            adj = prepared_batch[4]
             # best_seq_list = model.beamsearch(org, out,simp_ids, org_ids, org_pos, 5)
             output_teacher_forcing = model(org, out, org_ids, org_pos, adj, simp_ids, 1.0)
 

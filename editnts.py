@@ -37,7 +37,7 @@ def unsort(x_sorted, sorted_order):
     return x_unsort
 
 class EncoderRNN(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, pos_vocab_size, pos_embedding_dim,hidden_size, n_layers=1, embedding=None, embeddingPOS=None,dropout=0.3):
+    def __init__(self, vocab_size, embedding_dim, pos_vocab_size, pos_embedding_dim,hidden_size, n_layers=1, gcn = False, embedding=None, embeddingPOS=None,dropout=0.3):
         super(EncoderRNN, self).__init__()
         self.n_layers = n_layers
         self.hidden_size = hidden_size
@@ -54,7 +54,9 @@ class EncoderRNN(nn.Module):
 
         #self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True, dropout=dropout)
         self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True)
-        self.gcn = EdGCN(2*hidden_size)
+        self.do_gcn = gcn
+        if gcn:
+            self.gcn = EdGCN(2*hidden_size)
         #self.drop = nn.Dropout(dropout)
 
     def forward(self, inp, inp_pos, adj, hidden):
@@ -80,10 +82,11 @@ class EncoderRNN(nn.Module):
 
         h_unsorted=unsort(encoder_final[0], inp_sort_order)
         c_unsorted=unsort(encoder_final[1], inp_sort_order)
+        out = memory_bank.transpose(0,1)
+        if self.do_gcn:
+            out = self.gcn(out, adj)
 
-        gcn_out = self.gcn(memory_bank.transpose(0,1), adj)
-
-        return gcn_out, (h_unsorted,c_unsorted)
+        return out, (h_unsorted,c_unsorted)
 
     def initHidden(self, bsz):
         weight = next(self.parameters()).data
@@ -412,7 +415,7 @@ class EditNTS(nn.Module):
         self.encoder1 = EncoderRNN(config.vocab_size, config.embedding_dim,
                                    config.pos_vocab_size, config.pos_embedding_dim,
                                    config.word_hidden_units,
-                                   n_layers,
+                                   n_layers, config.do_gcn,
                                    self.embedding, self.embeddingPOS)
 
         self.decoder = EditDecoderRNN(config.vocab_size, config.embedding_dim, config.word_hidden_units * 2,

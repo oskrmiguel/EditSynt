@@ -163,7 +163,7 @@ class Dataset():
             yield self.idx_count, df
 
 
-def prepare_batch(batch_df,vocab, max_length=100):
+def prepare_batch(batch_df,vocab, max_length=100, do_gcn = False):
     """
         :param example: one row in pandas dataframe with feild ['comp_tokens', 'simp_tokens','comp_ids','simp_ids', 'comp_pos_ids', edit_labels','new_edit_ids']
         :param vocab: vocab object for translation
@@ -180,5 +180,11 @@ def prepare_batch(batch_df,vocab, max_length=100):
     # tgt = batchify_start_stop(batch_df['edit_ids'], max_len=max_length)  # edit ids has early stop
     tgt = batchify_start_stop(batch_df['new_edit_ids'], max_len=max_length)  # new_edit_ids do not do early stopping
     # I think new edit ids do not ave early stopping
-    adj = batchify_adj(batch_df['comp_dep_rows'], batch_df['comp_dep_cols'], batch_df['comp_ids'], max_len=max_length)
-    return [inp, inp_pos, adj, tgt, inp_simp], batch_df['comp_tokens']
+    adj = None
+    if do_gcn:
+        if 'comp_dep_rows' in batch_df:
+            adj = batchify_adj(batch_df['comp_dep_rows'], batch_df['comp_dep_cols'], batch_df['comp_ids'], max_len=max_length)
+        else:
+            print("ERROR: no dependency graph in data.")
+            exit(1)
+    return [inp, inp_pos, tgt, inp_simp, adj], batch_df['comp_tokens']
