@@ -24,10 +24,10 @@ def build_vocab(files, out, lang):
     for k, v in sorted(V.items(), key=lambda x: x[1], reverse=True):
         fo.write("{} {}\n".format(k, v))
 
-def do_file(c_in, s_in, word_vocab, pos_vocab, outfile, lang):
+def do_file(split, c_in, s_in, word_vocab, pos_vocab, outfile, lang):
     complex_fh=open(c_in)
     simple_fh=open(s_in)
-    df = dp.process_raw_data(complex_fh, simple_fh, pos_vocab, lang)
+    df = dp.process_raw_data(complex_fh, simple_fh, pos_vocab, lang, discard_identical = split != 'test')
     return dp.editnet_data_to_editnetID(df, word_vocab, outfile)
 
 files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.dst'],
@@ -36,7 +36,7 @@ files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/
 
 #files = [['t_all', 't1', 't2']]
 
-out ='data/wikilarge_dep'
+out ='data/wikilarge'
 vocab_file = os.path.join(out,"vocab.txt")
 
 lang='en'
@@ -47,7 +47,7 @@ pos_vocab = vocabulary.POSvocab('vocab_data/ptb_ud_tagset.txt')
 
 for split,c,s in files:
     print('Processing ', split)
-    do_file(c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.pos".format(split)), lang)
+    do_file(split, c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.pos".format(split)), lang)
 
 # split 90% train, 10% val
 # train=df.sample(frac=0.9,random_state=233) #random state is a seed value

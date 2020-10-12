@@ -118,10 +118,11 @@ def replace_lrb(sent_string):
     return new_sent
 
 
-def process_raw_data(comp_txt, simp_txt, pos_vocab, lang):
+def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical):
     comp_txt = [line.lower().split() for line in comp_txt]
     simp_txt = [line.lower().split() for line in simp_txt]
-    comp_txt,simp_txt=zip(*[(i[0],i[1]) for i in zip(comp_txt,simp_txt) if i[0] != i[1]])
+    if discard_identical:
+        comp_txt,simp_txt=zip(*[(i[0],i[1]) for i in zip(comp_txt,simp_txt) if i[0] != i[1]])
 
     # df_comp = pd.read_csv('data/%s_comp.csv'%dataset,  sep='\t')
     # df_simp= pd.read_csv('data/%s_simp.csv'%dataset,  sep='\t')
