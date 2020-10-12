@@ -8,7 +8,6 @@ import pandas as pd
 
 random.seed(233)
 
-
 def build_vocab(files, out, lang):
     V = {}
     F = []
@@ -24,11 +23,15 @@ def build_vocab(files, out, lang):
     for k, v in sorted(V.items(), key=lambda x: x[1], reverse=True):
         fo.write("{} {}\n".format(k, v))
 
-def do_file(split, c_in, s_in, word_vocab, pos_vocab, outfile, lang):
+def do_file(split, c_in, s_in, word_vocab, pos_vocab, outfile, lang, do_dep):
     complex_fh=open(c_in)
     simple_fh=open(s_in)
-    df = dp.process_raw_data(complex_fh, simple_fh, pos_vocab, lang, discard_identical = split != 'test')
+    df = dp.process_raw_data(complex_fh, simple_fh, pos_vocab, lang, discard_identical = split != 'test', do_dep = do_dep)
     return dp.editnet_data_to_editnetID(df, word_vocab, outfile)
+
+
+lang='en'
+do_dep = True # changeme to do dependency parsing
 
 files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.dst'],
 ['train', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.dst'],
@@ -37,9 +40,9 @@ files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/
 #files = [['t_all', 't1', 't2']]
 
 out ='data/wikilarge'
+#out ='data/t'
 vocab_file = os.path.join(out,"vocab.txt")
 
-lang='en'
 build_vocab(files, vocab_file, lang)
 word_vocab = vocabulary.Vocab()
 word_vocab.add_vocab_from_file(vocab_file, 30000)
@@ -47,7 +50,7 @@ pos_vocab = vocabulary.POSvocab('vocab_data/ptb_ud_tagset.txt')
 
 for split,c,s in files:
     print('Processing ', split)
-    do_file(split, c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.pos".format(split)), lang)
+    do_file(split, c, s, word_vocab, pos_vocab, os.path.join(out, "{}.df.filtered.pos".format(split)), lang, do_dep)
 
 # split 90% train, 10% val
 # train=df.sample(frac=0.9,random_state=233) #random state is a seed value

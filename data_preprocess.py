@@ -118,7 +118,7 @@ def replace_lrb(sent_string):
     return new_sent
 
 
-def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical):
+def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical, do_dep = False):
     comp_txt = [line.lower().split() for line in comp_txt]
     simp_txt = [line.lower().split() for line in simp_txt]
     if discard_identical:
@@ -143,7 +143,10 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical):
         return df
 
     def add_pos_dep(df, src_sentences, pos_vocab, spacy):
-        print("POS and DEP tagging:", end='', flush = True)
+        if do_dep:
+            print("POS and DEP tagging:", end='', flush = True)
+        else:
+            print("POS tagging:", end='', flush = True)
         comp_sentences = []
         pos_sentences = []
         dep_sentences = []
@@ -154,20 +157,22 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical):
                 print(' {}'.format(i), end=' ', flush = True)
             spacy_doc = spacy.analize(sent)
             pos_sentence = [(token.text, token.pos_) for token in spacy_doc]
-            tree_str = spacy.dep2str(spacy_doc)
             comp_sentence = [x[0] for x in pos_sentence]
-            adj = tree2adj(tree_str, comp_sentence)
             comp_sentences.append(comp_sentence)
             pos_sentences.append(pos_sentence)
-            dep_sentences.append(tree_str)
-            dep_sentences_rows.append(adj.row)
-            dep_sentences_cols.append(adj.col)
+            if do_dep:
+                tree_str = spacy.dep2str(spacy_doc)
+                adj = tree2adj(tree_str, comp_sentence)
+                dep_sentences.append(tree_str)
+                dep_sentences_rows.append(adj.row)
+                dep_sentences_cols.append(adj.col)
         print('done')
         df['comp_tokens'] = comp_sentences
         df['comp_pos_tags'] = pos_sentences
-        df['comp_dep_tree'] = dep_sentences
-        df['comp_dep_rows'] = dep_sentences_rows
-        df['comp_dep_cols'] = dep_sentences_cols
+        if do_dep:
+            df['comp_dep_tree'] = dep_sentences
+            df['comp_dep_rows'] = dep_sentences_rows
+            df['comp_dep_cols'] = dep_sentences_cols
         pos_ids_list = []
         for i,psent in enumerate(pos_sentences):
             pos_ids = [pos_vocab.w2i[w[1]] if w[1] in pos_vocab.w2i.keys() else pos_vocab.w2i[UNK] for w in psent]
@@ -183,6 +188,7 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical):
 
 def editnet_data_to_editnetID(df,vocab, output_path):
     """
+    TODO: Uppdate doc: dependency columns only if do_dep == True
     this function reads from df.columns=['comp_tokens', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
     and add vocab ids for comp_tokens, simp_tokens, and edit_labels
     :param df: df.columns=['comp_tokens', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
@@ -206,18 +212,24 @@ def editnet_data_to_editnetID(df,vocab, output_path):
         return comp_id, simp_id, edit_id  # add a dimension for batch, batch_size =1
 
     print("Writing pandas dataframe ... ", end='', flush = True)
+    do_dep = False
     for i,example in df.iterrows():
+        if do_dep == False and 'comp_dep_tree' in example is not None:
+            do_dep = True
         comp_id, simp_id, edit_id = prepare_example(example,vocab)
         ex=[example['comp_tokens'], comp_id,
             example['simp_tokens'], simp_id,
             example['edit_labels'], edit_id,
-            example['comp_pos_tags'],example['comp_pos_ids'],
-            example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']
+            example['comp_pos_tags'],example['comp_pos_ids']
          ]
+        if do_dep:
+            ex.append([example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']])
         out_list.append(ex)
-    outdf = pd.DataFrame(out_list, columns=['comp_tokens','comp_ids', 'simp_tokens','simp_ids',
-                                            'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids',
-                                            'comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
+    columns= ['comp_tokens','comp_ids', 'simp_tokens','simp_ids',
+              'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids']
+    if do_dep:
+        columns.append(['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
+    outdf = pd.DataFrame(out_list, columns=columns)
     outdf.to_pickle(output_path)
     print('saved to %s'%output_path)
     return outdf
