@@ -83,9 +83,11 @@ class EncoderRNN(nn.Module):
         h_unsorted=unsort(encoder_final[0], inp_sort_order)
         c_unsorted=unsort(encoder_final[1], inp_sort_order)
         out = memory_bank.transpose(0,1)
-        if self.do_gcn:
-            out = self.gcn(out, adj)
-
+        try:
+            if self.do_gcn:
+                out = self.gcn(out, adj)
+        except AttributeError:
+            pass
         return out, (h_unsorted,c_unsorted)
 
     def initHidden(self, bsz):

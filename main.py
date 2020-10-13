@@ -309,6 +309,10 @@ def main():
         ckpt_path = args.load_model
         ckpt = Checkpoint.load(ckpt_path)
         edit_net = ckpt.model
+        try:
+            aux = edit_net.encoder1.do_gcn
+        except AttributeError:
+            edit_net.encoder1.do_gcn = False
         edit_net.cuda()
         edit_net.train()
 

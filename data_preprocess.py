@@ -223,12 +223,12 @@ def editnet_data_to_editnetID(df,vocab, output_path):
             example['comp_pos_tags'],example['comp_pos_ids']
          ]
         if do_dep:
-            ex.append([example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']])
+            ex += [example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']]
         out_list.append(ex)
     columns= ['comp_tokens','comp_ids', 'simp_tokens','simp_ids',
               'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids']
     if do_dep:
-        columns.append(['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
+        columns += ['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols']
     outdf = pd.DataFrame(out_list, columns=columns)
     outdf.to_pickle(output_path)
     print('saved to %s'%output_path)
