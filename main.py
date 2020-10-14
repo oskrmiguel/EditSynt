@@ -274,36 +274,6 @@ def main():
     print('*'*10)
     vocab = vocabulary.Vocab()
     vocab.add_vocab_from_file(args.vocab_file, args.vocab_size)
-    word_embed_size = vocab.add_embedding(gloveFile=args.embed_file)
-    pos_vocab = vocabulary.POSvocab(args.postag_file) #load pos-tags embeddings
-    print('*' * 10)
-
-    print(args)
-    print("generating config")
-    hyperparams=collections.namedtuple(
-        'hps', #hyper=parameters
-        ['vocab_size', 'embedding_dim',
-         'word_hidden_units', 'sent_hidden_units',
-         'pretrained_embedding', 'word2id', 'id2word',
-         'pos_vocab_size', 'pos_embedding_dim', 'do_gcn']
-    )
-    hps = hyperparams(
-        vocab_size=vocab.count,
-        embedding_dim=word_embed_size,
-        word_hidden_units=args.hidden,
-        sent_hidden_units=args.hidden,
-        pretrained_embedding=vocab.embedding,
-        word2id=vocab.w2i,
-        id2word=vocab.i2w,
-        pos_vocab_size=pos_vocab.count,
-        pos_embedding_dim=30,
-        do_gcn=args.do_gcn
-    )
-
-    print('init editNTS model')
-    edit_net = EditNTS(hps, n_layers=1)
-    edit_net.cuda()
-
     if args.load_model is not None:
         print("load edit_net for further training")
         ckpt_path = args.load_model
@@ -314,8 +284,35 @@ def main():
         except AttributeError:
             edit_net.encoder1.do_gcn = False
         edit_net.cuda()
-        edit_net.train()
+    else:
+        word_embed_size = vocab.add_embedding(gloveFile=args.embed_file)
+        pos_vocab = vocabulary.POSvocab(args.postag_file) #load pos-tags embeddings
+        print(args)
+        print("generating config")
+        hyperparams=collections.namedtuple(
+            'hps', #hyper=parameters
+            ['vocab_size', 'embedding_dim',
+             'word_hidden_units', 'sent_hidden_units',
+             'pretrained_embedding', 'word2id', 'id2word',
+             'pos_vocab_size', 'pos_embedding_dim', 'do_gcn']
+        )
+        hps = hyperparams(
+            vocab_size=vocab.count,
+            embedding_dim=word_embed_size,
+            word_hidden_units=args.hidden,
+            sent_hidden_units=args.hidden,
+            pretrained_embedding=vocab.embedding,
+            word2id=vocab.w2i,
+            id2word=vocab.i2w,
+            pos_vocab_size=pos_vocab.count,
+            pos_embedding_dim=30,
+            do_gcn=args.do_gcn
+        )
 
+        print('init editNTS model')
+        edit_net = EditNTS(hps, n_layers=1)
+        edit_net.cuda()
+    print('*' * 10)
     if args.eval_input is not None:
         evaluation(args.eval_input, edit_net, args, vocab, args.eval_output)
     else:
