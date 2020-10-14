@@ -23,9 +23,10 @@ def cal_bleu_score(decoded, target):
 
 class Evaluator():
     """"""
-    def __init__(self, loss, batch_size=64):
+    def __init__(self, loss, batch_size=64, logging=print):
         self.loss = loss
         self.batch_size = batch_size
+        self.logging = logging
 
     def evaluate(self, dataset, vocab, model, args, max_edit_steps=50):
         """ Evaluate a model on given dataset and return performance during training
@@ -45,7 +46,7 @@ class Evaluator():
         sari_list = []
         sys_out=[]
         batch_size = self.batch_size
-        print('Doing tokenized evaluation')
+        self.logging('Doing tokenized evaluation')
         for i, batch_df in dataset.batch_generator(batch_size=batch_size, shuffle=False):
             model.eval()
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn)  # comp,scpn,simp
@@ -119,5 +120,5 @@ class Evaluator():
                     gen_string = ' '.join(greedy_decoded_tokens)
                     sari_list.append(SARIsent(comp_string, gen_string, [simp_string]))
 
-        print('loss_with_teacher_forcing', np.mean(print_loss_tf))
+        self.logging('loss_with_teacher_forcing {}'.format(np.mean(print_loss_tf).item()))
         return np.mean(print_loss_tf), np.mean(bleu_list), np.mean(sari_list), sys_out

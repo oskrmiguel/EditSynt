@@ -84,9 +84,9 @@ def reweight_global_loss(w_add,w_keep,w_del):
     NLL_weight[DEL_ID] = w_del
     return NLL_weight
 
-def training(edit_net,nepochs, args, vocab):
+def training(edit_net,nepochs, args, vocab, logging):
     eval_dataset = data.Dataset(os.path.join(args.data_dir, 'val.df.filtered.pos')) # load eval dataset
-    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size)
+    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size, logging=logging.info)
     editnet_optimizer = torch.optim.Adam(edit_net.parameters(),
                                           lr=1e-3, weight_decay=1e-6)
     # scheduler = MultiStepLR(abstract_optimizer, milestones=[20,30,40], gamma=0.1)
@@ -155,7 +155,7 @@ def training(edit_net,nepochs, args, vocab):
                 log_msg = 'Epoch: %d, Step: %d, Loss: %.4f' % (
                     epoch,i, np.mean(print_loss))
                 print_loss = []
-                print(log_msg)
+                logging.info(log_msg)
 
                 # Checkpoint
             if i % args.check_every == 0:
@@ -173,7 +173,7 @@ def training(edit_net,nepochs, args, vocab):
                 # ps.print_stats()
                 # print(s.getvalue())
                 log_msg = "epoch %d, step %d, Dev loss: %.4f, Bleu score: %.4f, Sari: %.4f \n" % (epoch, i, val_loss, bleu_score, sari)
-                print(log_msg)
+                logging.info(log_msg)
 
                 # if val_loss < best_eval_loss:
                 #     best_eval_loss = val_loss
@@ -197,29 +197,27 @@ def training(edit_net,nepochs, args, vocab):
                                opt=editnet_optimizer,
                                epoch=epoch, step=i,
                     ).save(args.store_dir)
-                print("checked after %d steps"%i)
+                logging.info("checked after %d steps"%i)
                 if args.early_stopping > 0 and (checkN - best_checkN) > args.early_stopping:
-                    print("Early stopping (best epoch is {})".format(best_epoch))
+                    logging.info("Early stopping (best epoch is {})".format(best_epoch))
                     return edit_net
                 edit_net.train()
     return edit_net
 
-def evaluation(infile, edit_net, args, vocab, outfile):
+def evaluation(infile, edit_net, args, vocab, outfile, logging):
     edit_net.eval()
     eval_dataset = data.Dataset(infile) # load eval dataset
-    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size)
+    evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size, logging=logging.info)
     val_loss, bleu_score, sari, sys_out = evaluator.evaluate(eval_dataset, vocab, edit_net, args)
-    print("Bleu score: {:.4f}, Sari: {:.4f}".format(bleu_score, sari))
+    logging.info("Bleu score: {:.4f}, Sari: {:.4f}".format(bleu_score, sari))
     if outfile is not None:
-        print('Writing output in {}'.format(outfile))
+        logging.info('Writing output in {}'.format(outfile))
         with open(outfile, "w",encoding="utf-8") as f:
             f.write('\n'.join(sys_out))
             f.write('\n')
 
 def main():
     torch.manual_seed(233)
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,dest='data_dir',
                         help='Directory with train/val data.')
@@ -271,11 +269,11 @@ def main():
     #torch.cuda.set_device(args.device)
 
     # load vocab-related files and init vocab
-    print('*'*10)
-    vocab = vocabulary.Vocab()
+    logging.info('*'*10)
+    vocab = vocabulary.Vocab(logging.info)
     vocab.add_vocab_from_file(args.vocab_file, args.vocab_size)
     if args.load_model is not None:
-        print("load edit_net for further training")
+        logging.info("load edit_net for further training")
         ckpt_path = args.load_model
         ckpt = Checkpoint.load(ckpt_path)
         edit_net = ckpt.model
@@ -287,8 +285,8 @@ def main():
     else:
         word_embed_size = vocab.add_embedding(gloveFile=args.embed_file)
         pos_vocab = vocabulary.POSvocab(args.postag_file) #load pos-tags embeddings
-        print(args)
-        print("generating config")
+        logging.info(args)
+        logging.info("generating config")
         hyperparams=collections.namedtuple(
             'hps', #hyper=parameters
             ['vocab_size', 'embedding_dim',
@@ -309,19 +307,20 @@ def main():
             do_gcn=args.do_gcn
         )
 
-        print('init editNTS model')
+        logging.info('init editNTS model')
         edit_net = EditNTS(hps, n_layers=1)
         edit_net.cuda()
-    print('*' * 10)
+    logging.info('*' * 10)
     if args.eval_input is not None:
-        evaluation(args.eval_input, edit_net, args, vocab, args.eval_output)
+        evaluation(args.eval_input, edit_net, args, vocab, args.eval_output, logging)
     else:
-        training(edit_net, args.epochs, args, vocab)
+        training(edit_net, args.epochs, args, vocab, logging)
 
 
 if __name__ == '__main__':
     import os
     cwd = os.getcwd()
-    print(cwd)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
+    logging.info(cwd)
 
     main()

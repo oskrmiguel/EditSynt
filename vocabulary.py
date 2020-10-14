@@ -17,12 +17,13 @@ START_ID = 4 # this has a vocab id, which is uded for indicating start of the se
 STOP_ID = 5 # This has a vocab id, which is used to stop decoding [5]
 
 class Vocab():
-    def __init__(self):
+    def __init__(self, logging=print):
         self.word_list = [PAD, UNK, KEEP, DEL, START, STOP]
         self.w2i = {}
         self.i2w = {}
         self.count = 0
         self.embedding = None
+        self.logging = logging
 
     def add_vocab_from_file(self, vocab_file="../vocab_data/vocab.txt",vocab_size=30000):
         with open(vocab_file, "r") as f:
@@ -30,7 +31,7 @@ class Vocab():
                 if i >=vocab_size:
                     break
                 self.word_list.append(line.split()[0])  # only want the word, not the count
-        print("read %d words from vocab file" % len(self.word_list))
+        self.logging("read %d words from vocab file" % len(self.word_list))
 
         for w in self.word_list:
             self.w2i[w] = self.count
@@ -38,7 +39,7 @@ class Vocab():
             self.count += 1
 
     def add_embedding(self, gloveFile):
-        print("Loading Glove embeddings")
+        self.logging("Loading Glove embeddings")
         # self.embedding = np.zeros(shape=(len(self.word_list), 300))
         # for i in range(len(self.word_list)):
         #     self.embedding[i] = np.random.rand(300)
@@ -64,7 +65,7 @@ class Vocab():
                     # if len(model) % 1000 == 0:
                         # print("processed %d vocab_data" % len(model))
         self.embedding = embedding_matrix
-        print("%d words out of %d has embeddings in the glove file" % (len(model), len(self.word_list)))
+        self.logging("%d words out of %d has embeddings in the glove file" % (len(model), len(self.word_list)))
         return embed_size
 
 class POSvocab():
