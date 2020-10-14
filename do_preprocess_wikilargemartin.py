@@ -35,7 +35,7 @@ do_dep = True # changeme to do dependency parsing
 
 files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.test.dst'],
 ['train', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.train.dst'],
-['dev', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.dst']]
+['val', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.src', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/wikilarge-martin_split/wikilarge/wiki.full.aner.ori.valid.dst']]
 
 #files = [['t_all', 't1', 't2']]
 
