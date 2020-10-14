@@ -103,7 +103,14 @@ def batchify_adj(rows, cols, tokens, max_len):
     for r,c in zip(rows, cols):
         adj = sp.coo_matrix((np.ones(r.shape[0]), (r, c)),
                             shape=(max_n, max_n), dtype=np.float32)
-        adjs.append(adj.toarray()[:max_len, :max_len])
+        # build symmetric adjacency matrix
+        adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+        adj = adj.toarray()
+        # divide by node degree
+        asum = adj.sum(axis=1)
+        asum[asum == 0] = 1
+        adj = adj * np.diag(1.0 / asum)
+        adjs.append(adj[:max_len, :max_len])
     return Variable(torch.from_numpy(np.array(adjs)).float()).cuda()
 
 class Datachunk():
