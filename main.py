@@ -254,12 +254,22 @@ def main():
     parser.add_argument('--hidden', type=int, default=200)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--best_sari', action="store_true", help='Select model according to best sari in dev.')
+    parser.add_argument('--logfile', dest='logfile', type=str, default=None,
+                        help='Write to logfile as well as stderr')
     parser.add_argument('--device', type=int, default=1,
                         help='select GPU')
 
     #train_file = '/media/vocab_data/yue/TS/editnet_data/%s/train.df.filtered.pos'%dataset
     # test='/media/vocab_data/yue/TS/editnet_data/%s/test.df.pos' % args.dataset
     args = parser.parse_args()
+
+    if args.logfile is not None:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s',
+                            handlers=[
+                                logging.FileHandler(args.logfile),
+                                logging.StreamHandler()])
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
 
     if args.eval_input and args.load_model is None:
         print("Can't --eval_input without a pretrained model")
@@ -320,7 +330,6 @@ def main():
 if __name__ == '__main__':
     import os
     cwd = os.getcwd()
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
-    logging.info(cwd)
+    print(cwd)
 
     main()
