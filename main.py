@@ -4,6 +4,7 @@
 from __future__ import print_function
 
 import os
+import sys
 import argparse
 import collections
 import logging
@@ -209,12 +210,14 @@ def evaluation(infile, edit_net, args, vocab, outfile, logging):
     eval_dataset = data.Dataset(infile) # load eval dataset
     evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size, logging=logging.info)
     val_loss, bleu_score, sari, sys_out = evaluator.evaluate(eval_dataset, vocab, edit_net, args)
-    logging.info("Bleu score: {:.4f}, Sari: {:.4f}".format(bleu_score, sari))
+    res_str = "Bleu: {:.4f}, Sari: {:.4f}".format(bleu_score, sari)
+    logging.info(res_str)
     if outfile is not None:
         logging.info('Writing output in {}'.format(outfile))
         with open(outfile, "w",encoding="utf-8") as f:
             f.write('\n'.join(sys_out))
             f.write('\n')
+    print(res_str)
 
 def main():
     torch.manual_seed(233)
@@ -256,6 +259,7 @@ def main():
     parser.add_argument('--best_sari', action="store_true", help='Select model according to best sari in dev.')
     parser.add_argument('--logfile', dest='logfile', type=str, default=None,
                         help='Write to logfile as well as stderr')
+    parser.add_argument('--nolog', action="store_true", help='Disable logging.')
     parser.add_argument('--device', type=int, default=1,
                         help='select GPU')
 
@@ -270,6 +274,9 @@ def main():
                                 logging.StreamHandler()])
     else:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s')
+
+    if args.nolog:
+        logging.disable(sys.maxsize)
 
     if args.eval_input and args.load_model is None:
         print("Can't --eval_input without a pretrained model")
@@ -330,6 +337,5 @@ def main():
 if __name__ == '__main__':
     import os
     cwd = os.getcwd()
-    print(cwd)
 
     main()

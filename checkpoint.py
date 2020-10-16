@@ -102,7 +102,7 @@ class Checkpoint(object):
         #with open(os.path.join(path, cls.OUTPUT_VOCAB_FILE), 'rb') as fin:
         #    output_vocab = dill.load(fin)
         opt = resume_checkpoint['opt']
-        print('the fking model is,', type(model))
+        #print('the fking model is,', type(model))
         return Checkpoint(model=model,
                           opt=opt,
                           epoch=resume_checkpoint['epoch'],
