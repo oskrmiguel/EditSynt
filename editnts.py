@@ -37,21 +37,12 @@ def unsort(x_sorted, sorted_order):
     return x_unsort
 
 class EncoderRNN(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, pos_vocab_size, pos_embedding_dim,hidden_size, n_layers=1, gcn = False, embedding=None, embeddingPOS=None,dropout=0.3):
+    def __init__(self, embedding_dim, pos_embedding_dim,hidden_size, embedding, embeddingPOS, n_layers=1, gcn = False, dropout=0.3):
         super(EncoderRNN, self).__init__()
         self.n_layers = n_layers
         self.hidden_size = hidden_size
-
-        if embedding is None:
-            self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        else:
-            self.embedding = embedding
-
-        if embeddingPOS is None:
-            self.embeddingPOS = nn.Embedding(pos_vocab_size, pos_embedding_dim)
-        else:
-            self.embeddingPOS = embeddingPOS
-
+        self.embedding = embedding
+        self.embeddingPOS = embeddingPOS
         #self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True, dropout=dropout)
         self.rnn = nn.LSTM(embedding_dim+pos_embedding_dim, hidden_size, num_layers=n_layers, batch_first=True, bidirectional=True)
         self.do_gcn = gcn
@@ -97,17 +88,13 @@ class EncoderRNN(nn.Module):
 
 
 class EditDecoderRNN(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_size, n_layers=1, embedding=None):
+    def __init__(self, embedding, vocab_size, embedding_dim, hidden_size, n_layers=1):
         super(EditDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.n_layers = n_layers
-
-        if embedding is None:
-            self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        else:
-            self.embedding = embedding
+        self.embedding = embedding
         self.rnn_edits = nn.LSTM(embedding_dim, hidden_size, num_layers=n_layers, batch_first=True)
         self.rnn_words = nn.LSTM(embedding_dim, hidden_size, num_layers=n_layers, batch_first=True)
         self.attn_Projection_org = nn.Linear(hidden_size, hidden_size, bias=False)
@@ -116,8 +103,8 @@ class EditDecoderRNN(nn.Module):
 
         self.attn_MLP = nn.Sequential(nn.Linear(hidden_size * 4, embedding_dim),
                                           nn.Tanh())
-        self.out = nn.Linear(embedding_dim, self.vocab_size)
-        self.out.weight.data = self.embedding.weight.data[:self.vocab_size]
+        self.out = nn.Linear(embedding_dim, vocab_size)
+        self.out.weight.data = self.embedding.weight.data[:vocab_size]
 
     def execute(self, symbol, input, lm_state):
         """
@@ -414,14 +401,14 @@ class EditNTS(nn.Module):
             self.embedding.weight.data.copy_(torch.from_numpy(config.pretrained_embedding))
         self.embeddingPOS = nn.Embedding(config.pos_vocab_size, config.pos_embedding_dim)
 
-        self.encoder1 = EncoderRNN(config.vocab_size, config.embedding_dim,
-                                   config.pos_vocab_size, config.pos_embedding_dim,
+        self.encoder1 = EncoderRNN(config.embedding_dim,
+                                   config.pos_embedding_dim,
                                    config.word_hidden_units,
-                                   n_layers, config.do_gcn,
-                                   self.embedding, self.embeddingPOS)
+                                   self.embedding, self.embeddingPOS,
+                                   n_layers, config.do_gcn)
 
-        self.decoder = EditDecoderRNN(config.vocab_size, config.embedding_dim, config.word_hidden_units * 2,
-                                      n_layers, self.embedding)
+        self.decoder = EditDecoderRNN(self.embedding, config.vocab_size, config.embedding_dim, config.word_hidden_units * 2,
+                                      n_layers )
 
 
     def forward(self,org,output,org_ids,org_pos,adj,simp_sent,teacher_forcing_ratio=1.0):

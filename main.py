@@ -117,7 +117,6 @@ def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
             train_dataset = data.Datachunk(train_file)
 
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
-
             #     time1 = time.time()
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn) #comp,scpn,simp
 
@@ -237,8 +236,11 @@ def main():
                         default='vocab_path/ptb_ud_tagset.txt',
                         help='POS tag set file.')
     parser.add_argument('--embed_file', type=str, dest='embed_file',
-                        default='vocab_path/glove.6B.100d.txt',
+                        default='',
                         help='Embedding file.')
+    parser.add_argument('--replace_embed', type=str, dest='replace_embed',
+                        default='',
+                        help='Replace embeddings of loaded model with these.')
     parser.add_argument('--vocab_file', type=str, dest='vocab_file',
                         default=None,
                         help='Vocabulary file')
@@ -309,6 +311,16 @@ def main():
                 logging.error('--do_gcn provided but model has no GCN')
                 exit(1)
             edit_net.encoder1.do_gcn = False
+        if args.replace_embed:
+            # load new embeddings
+            word_embed_size = vocab.add_embedding(gloveFile=args.replace_embed)
+            logging.info("replacing model embeddings with {}".format(args.replace_embed))
+            edit_net.embedding = nn.Embedding(vocab.count, word_embed_size)
+            edit_net.embedding.weight.data.copy_(torch.from_numpy(vocab.embedding))
+            edit_net.encoder1.embedding = edit_net.embedding
+            edit_net.decoder.embedding = edit_net.embedding
+            edit_net.decoder.out = nn.Linear(word_embed_size, vocab.count)
+            edit_net.decoder.out.weight.data = edit_net.decoder.embedding.weight.data[:vocab.count]
         edit_net.cuda()
     else:
         word_embed_size = vocab.add_embedding(gloveFile=args.embed_file)

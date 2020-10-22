@@ -37,13 +37,14 @@ class Vocab():
             self.w2i[w] = self.count
             self.i2w[self.count] = w
             self.count += 1
+        return self.count
 
     def add_embedding(self, gloveFile):
-        self.logging("Loading embeddings")
-        # self.embedding = np.zeros(shape=(len(self.word_list), 300))
-        # for i in range(len(self.word_list)):
-        #     self.embedding[i] = np.random.rand(300)
-        # return 300
+        self.logging("loading embeddings")
+        # self.embedding = np.zeros(shape=(len(self.word_list), 30))
+        # for i in range(self.count):
+        #     self.embedding[i] = np.random.rand(30)
+        # return 30
         with open(gloveFile, 'r', encoding='utf-8', errors='surrogateescape') as f:
             model = {}
             w_set = set(self.word_list)
