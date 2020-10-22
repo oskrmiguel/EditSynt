@@ -48,6 +48,29 @@ class Spacy:
         root = [token for token in doc if token.head == token][0]
         return self._dep2str(root, 'root')
 
+
+    def doc2adj(self, doc):
+        '''Directly produce adjacency list from spacy output'''
+        def _doc2adj(root, parents):
+            root_id = token_map[root.text]
+            parents.append([root_id, root_id]) # self-loop
+            for child in root.children:
+                parents.append([root_id, token_map[child.text]])
+                _doc2adj(child, parents)
+        comp_tokens = [token.text for token in doc]
+        root = [token for token in doc if token.head == token][0]
+        token_map = {x: i for i, x in enumerate(comp_tokens)}
+        parents = []
+        _doc2adj(root, parents)
+        # pstrkk = [[comp_tokens[a], comp_tokens[b]] for a, b in parents]
+        # print(parents)
+        # print(pstrkk)
+        N = len(comp_tokens)
+        edges = np.array(parents, dtype=np.int32)
+        adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])),
+                            shape=(N, N), dtype=np.float32)
+        return adj
+
 ################## tree2graph
 
 def parse_tree(tree, comp_tokens):
@@ -163,7 +186,7 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical, do_
             pos_sentences.append(pos_sentence)
             if do_dep:
                 tree_str = spacy.dep2str(spacy_doc)
-                adj = tree2adj(tree_str, comp_sentence)
+                adj = spacy.doc2adj(spacy_doc)
                 dep_sentences.append(tree_str)
                 dep_sentences_rows.append(adj.row)
                 dep_sentences_cols.append(adj.col)
