@@ -85,8 +85,9 @@ def reweight_global_loss(w_add,w_keep,w_del):
     NLL_weight[DEL_ID] = w_del
     return NLL_weight
 
-def training(edit_net,nepochs, args, vocab, logging):
-    eval_dataset = data.Dataset(os.path.join(args.data_dir, 'val.df.filtered.pos')) # load eval dataset
+def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
+    edit_net.train()
+    eval_dataset = data.Dataset(val_file) # load eval dataset
     evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size, logging=logging.info)
     editnet_optimizer = torch.optim.Adam(edit_net.parameters(),
                                           lr=1e-3, weight_decay=1e-6)
@@ -109,10 +110,11 @@ def training(edit_net,nepochs, args, vocab, logging):
     for epoch in range(nepochs):
         # scheduler.step()
         #reload training for every epoch
-        if os.path.isfile(os.path.join(args.data_dir, 'train.df.filtered.pos')):
-            train_dataset = data.Dataset(os.path.join(args.data_dir, 'train.df.filtered.pos'))
-        else:  # iter chunks and vocab_data
-            train_dataset = data.Datachunk(os.path.join(args.data_dir, 'train.df.filtered.pos'))
+        if os.path.isfile(train_file):
+            train_dataset = data.Dataset(train_file)
+        else:
+            # train file is a directory. iter chunks and vocab_data
+            train_dataset = data.Datachunk(train_file)
 
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
 
@@ -203,6 +205,7 @@ def training(edit_net,nepochs, args, vocab, logging):
                     logging.info("Early stopping (best epoch is {})".format(best_epoch))
                     return edit_net
                 edit_net.train()
+    logging.info("Finished all epochs (best epoch is {})".format(best_epoch))
     return edit_net
 
 def evaluation(infile, edit_net, args, vocab, outfile, logging):
@@ -224,6 +227,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,dest='data_dir',
                         help='Directory with train/val data.')
+    parser.add_argument('--train_file', type=str,dest='train_file',
+                        help='Training file. Use instead of --data_dir')
+    parser.add_argument('--val_file', type=str,dest='val_file',
+                        help='Validation file. Use instead of --data_dir')
     parser.add_argument('--store_dir', action='store', dest='store_dir',
                         help='Path to store models.')
     parser.add_argument('--postag_file', type=str, dest='postag_file',
@@ -328,10 +335,26 @@ def main():
         edit_net = EditNTS(hps, n_layers=1)
         edit_net.cuda()
     logging.info('*' * 10)
+
     if args.eval_input is not None:
         evaluation(args.eval_input, edit_net, args, vocab, args.eval_output, logging)
     else:
-        training(edit_net, args.epochs, args, vocab, logging)
+        if args.data_dir:
+            logging.info('Using data dir {}'.format(args.data_dir))
+            val_file = os.path.join(args.data_dir, 'val.df.filtered.pos')
+            train_file = os.path.join(args.data_dir, 'train.df.filtered.pos')
+        else:
+            if not args.val_file:
+                print("ERROR: wmpty --val_file (and not data dir)")
+                exit(1)
+            if not args.train_file:
+                print("ERROR: empty --train_file (and not data dir)")
+                exit(1)
+            val_file = args.val_file
+            train_file = args.train_file
+            logging.info('Using training {}'.format(args.train_file))
+            logging.info('Using validation {}'.format(args.val_file))
+        training(edit_net, train_file, val_file, args.epochs, args, vocab, logging)
 
 
 if __name__ == '__main__':
