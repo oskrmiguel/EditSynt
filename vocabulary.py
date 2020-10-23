@@ -39,7 +39,7 @@ class Vocab():
             self.count += 1
 
     def add_embedding(self, gloveFile):
-        self.logging("Loading Glove embeddings")
+        self.logging("Loading embeddings")
         # self.embedding = np.zeros(shape=(len(self.word_list), 300))
         # for i in range(len(self.word_list)):
         #     self.embedding[i] = np.random.rand(300)
@@ -65,7 +65,7 @@ class Vocab():
                     # if len(model) % 1000 == 0:
                         # print("processed %d vocab_data" % len(model))
         self.embedding = embedding_matrix
-        self.logging("%d words out of %d has embeddings in the glove file" % (len(model), len(self.word_list)))
+        self.logging("%d words out of %d has embeddings in the embedding file" % (len(model), len(self.word_list)))
         return embed_size
 
 class POSvocab():

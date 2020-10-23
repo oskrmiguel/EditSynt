@@ -406,11 +406,11 @@ class EditDecoderRNN(nn.Module):
 
 
 class EditNTS(nn.Module):
-    def __init__(self, config, n_layers=2):
+    def __init__(self, config, n_layers=2, logging=print):
         super(EditNTS, self).__init__()
         self.embedding = nn.Embedding(config.vocab_size, config.embedding_dim)
         if not(config.pretrained_embedding is None):
-            print('load pre-trained embeddings')
+            logging('loading pre-trained embeddings')
             self.embedding.weight.data.copy_(torch.from_numpy(config.pretrained_embedding))
         self.embeddingPOS = nn.Embedding(config.pos_vocab_size, config.pos_embedding_dim)
 

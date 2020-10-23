@@ -273,7 +273,7 @@ def main():
     #train_file = '/media/vocab_data/yue/TS/editnet_data/%s/train.df.filtered.pos'%dataset
     # test='/media/vocab_data/yue/TS/editnet_data/%s/test.df.pos' % args.dataset
     args = parser.parse_args()
-
+    args.print_every = min(args.print_every, args.check_every)
     if args.logfile is not None:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s [INFO] %(message)s',
                             handlers=[
@@ -293,6 +293,7 @@ def main():
     #torch.cuda.set_device(args.device)
 
     # load vocab-related files and init vocab
+    logging.info(' '.join(sys.argv))
     logging.info('*'*10)
     vocab = vocabulary.Vocab(logging.info)
     vocab.add_vocab_from_file(args.vocab_file, args.vocab_size)
@@ -304,6 +305,9 @@ def main():
         try:
             aux = edit_net.encoder1.do_gcn
         except AttributeError:
+            if args.do_gcn:
+                logging.error('--do_gcn provided but model has no GCN')
+                exit(1)
             edit_net.encoder1.do_gcn = False
         edit_net.cuda()
     else:
@@ -332,7 +336,7 @@ def main():
         )
 
         logging.info('init editNTS model')
-        edit_net = EditNTS(hps, n_layers=1)
+        edit_net = EditNTS(hps, logging.info, n_layers=1)
         edit_net.cuda()
     logging.info('*' * 10)
 
