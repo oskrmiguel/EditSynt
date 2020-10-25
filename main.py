@@ -348,7 +348,7 @@ def main():
         )
 
         logging.info('init editNTS model')
-        edit_net = EditNTS(hps, logging.info, n_layers=1)
+        edit_net = EditNTS(hps, n_layers=1, logging=logging.info)
         edit_net.cuda()
     logging.info('*' * 10)
 
