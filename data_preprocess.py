@@ -21,7 +21,9 @@ STOP = 'STOP' # This has a vocab id, which is used to stop decoding [5]
 class Spacy:
     def __init__(self, lang):
         l2m = { 'en' : 'en_core_web_sm',
-                'es' : 'es_core_news_sm' }
+                'es' : 'es_core_news_sm',
+                'fr' : 'fr_core_news_sm',
+                'it' : 'it_core_news_sm'}
         if lang not in l2m:
             print('Language "{}" not supported.'.format(lang))
             exit(1)
