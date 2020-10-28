@@ -106,8 +106,12 @@ def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
     best_checkN = 0 # best check
     checkN = 0
     print_loss = []  # Reset every print_every
+    train_i = 0
 
     for epoch in range(nepochs):
+        if train_i != 0:
+            args.check_every = min(args.check_every, train_i) # at least check once per epoch
+        train_i = 0
         # scheduler.step()
         #reload training for every epoch
         if os.path.isfile(train_file):
@@ -118,6 +122,7 @@ def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
 
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
             #     time1 = time.time()
+            train_i += 1
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn) #comp,scpn,simp
 
             # a batch of complex tokens in vocab ids, sorted in descending order
