@@ -89,7 +89,7 @@ def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
     edit_net.train()
     eval_dataset = data.Dataset(val_file) # load eval dataset
     evaluator = Evaluator(loss= nn.NLLLoss(ignore_index=vocab.w2i['PAD'], reduction='none'), batch_size = args.batch_size, logging=logging.info)
-    editnet_optimizer = torch.optim.Adam(edit_net.parameters(),
+    editnet_optimizer = torch.optim.Adam([param for param in edit_net.parameters() if param.requires_grad == True],
                                           lr=1e-3, weight_decay=1e-6)
     # scheduler = MultiStepLR(abstract_optimizer, milestones=[20,30,40], gamma=0.1)
     # abstract_scheduler = ReduceLROnPlateau(abstract_optimizer, mode='max')
@@ -252,6 +252,7 @@ def main():
     parser.add_argument('--load_model', type=str, dest='load_model',
                         default=None,
                         help='Path for loading pre-trained model for further training')
+    parser.add_argument('--freeze_embed', action="store_true", help='Freeze embeddings.')
     parser.add_argument('--do_gcn', action="store_true", help='Use GCN layer in encoder using dependency trees.')
 
     parser.add_argument('--eval_input', dest='eval_input', type=str, default=None,
@@ -334,7 +335,7 @@ def main():
         logging.info("generating config")
         hyperparams=collections.namedtuple(
             'hps', #hyper=parameters
-            ['vocab_size', 'embedding_dim',
+            ['vocab_size', 'embedding_dim', 'embedding_freeze',
              'word_hidden_units', 'sent_hidden_units',
              'pretrained_embedding', 'word2id', 'id2word',
              'pos_vocab_size', 'pos_embedding_dim', 'do_gcn']
@@ -342,6 +343,7 @@ def main():
         hps = hyperparams(
             vocab_size=vocab.count,
             embedding_dim=word_embed_size,
+            embedding_freeze=args.freeze_embed,
             word_hidden_units=args.hidden,
             sent_hidden_units=args.hidden,
             pretrained_embedding=vocab.embedding,

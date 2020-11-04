@@ -399,6 +399,12 @@ class EditNTS(nn.Module):
         if not(config.pretrained_embedding is None):
             logging('loading pre-trained embeddings')
             self.embedding.weight.data.copy_(torch.from_numpy(config.pretrained_embedding))
+        try:
+            if config.embedding_freeze:
+                logging('Freezing embeddings weights')
+                self.embedding.weight.requires_grad = False
+        except AttributeError:
+            pass
         self.embeddingPOS = nn.Embedding(config.pos_vocab_size, config.pos_embedding_dim)
 
         self.encoder1 = EncoderRNN(config.embedding_dim,
