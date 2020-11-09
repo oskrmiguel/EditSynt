@@ -43,6 +43,10 @@ out ='data/wikilarge'
 #out ='data/t'
 vocab_file = os.path.join(out,"vocab.txt")
 
+if os.path.exists(vocab_file):
+    print('Vocab file "{}" already exists. Delete first.'.format(vocab_file))
+    exit(1)
+
 build_vocab(files, vocab_file, lang)
 word_vocab = vocabulary.Vocab()
 word_vocab.add_vocab_from_file(vocab_file, 30000)

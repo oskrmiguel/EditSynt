@@ -15,8 +15,6 @@ def sort_by_lens(seq, seq_lengths):
     seq_sorted = seq.index_select(0, sort_order)
     return seq_sorted, seq_lengths_sorted, sort_order
 
-import nltk
-
 def cal_bleu_score(decoded, target):
     return nltk.translate.bleu_score.sentence_bleu([target], decoded,
             smoothing_function=nltk.translate.bleu_score.SmoothingFunction().method1)
@@ -50,7 +48,8 @@ class Evaluator():
         for i, batch_df in dataset.batch_generator(batch_size=batch_size, shuffle=False):
             model.eval()
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn)  # comp,scpn,simp
-
+            if i==1:
+                data.log_batch(prepared_batch[0], syn_tokens_list, self.logging)
             org_ids = prepared_batch[0]
             org_lens = org_ids.ne(0).sum(1)
             org = sort_by_lens(org_ids, org_lens)  # inp=[inp_sorted, inp_lengths_sorted, inp_sort_order]

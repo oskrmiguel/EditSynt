@@ -122,9 +122,10 @@ def training(edit_net, train_file, val_file, nepochs, args, vocab, logging):
 
         for i, batch_df in train_dataset.batch_generator(batch_size=args.batch_size, shuffle=True):
             #     time1 = time.time()
-            train_i += 1
             prepared_batch, syn_tokens_list = data.prepare_batch(batch_df, vocab, args.max_seq_len, args.do_gcn) #comp,scpn,simp
-
+            if epoch + train_i == 0:
+                data.log_batch(prepared_batch[0], syn_tokens_list, logging.info)
+            train_i += 1
             # a batch of complex tokens in vocab ids, sorted in descending order
             org_ids = prepared_batch[0]
             org_lens = org_ids.ne(0).sum(1)

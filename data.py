@@ -29,6 +29,11 @@ DEL_ID = 3 # This has a vocab id, which is used for deleting the corresponding w
 START_ID = 4 # this has a vocab id, which is uded for indicating start of the sentence for decoding [4]
 STOP_ID = 5 # This has a vocab id, which is used to stop decoding [5]
 
+def log_batch(batch_indices, batch_tokens, logging = print, k=5):
+    k = min(len(batch_indices), k)
+    for i in range(k):
+        logging(' '.join(['{}:{}'.format(token, idx) for idx, token in zip(batch_indices[i], batch_tokens[i])]))
+
 def sent2id(sent,vocab):
     """
     this function transfers a sentence (in list of strings) to an np_array

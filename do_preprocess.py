@@ -33,7 +33,13 @@ if not(os.path.exists(out)):
     print("Error: out directory \'{}\' does not exist".format(sys.argv[1]))
     exit(1)
 
-build_vocab(complex, simple, os.path.join(out,"vocab.txt"))
+
+vocabfile = os.path.join(out,"vocab.txt")
+if os.path.exists(vocab_file):
+    print('Vocab file "{}" already exists. Delete first.'.format(vocab_file))
+    exit(1)
+
+build_vocab(complex, simple, vocab_file)
 
 complex_fh=open(complex)
 simple_fh=open(simple)
