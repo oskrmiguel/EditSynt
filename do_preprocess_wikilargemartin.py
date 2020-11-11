@@ -41,7 +41,7 @@ files = [['test', '/sc01a7/sisx09/sx09a1/jirhizts/Corpus/SimplificationDatasets/
 
 out ='data/wikilarge'
 #out ='data/t'
-vocab_file = os.path.join(out,"vocab.txt")
+vocab_file = os.path.join(out,"vocab_aitor.txt")
 
 if os.path.exists(vocab_file):
     print('Vocab file "{}" already exists. Delete first.'.format(vocab_file))

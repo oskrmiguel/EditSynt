@@ -207,6 +207,8 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical, do_
         return df
 
     spacy = Spacy(lang)
+    df['comp_txt'] = [' '.join(x) for x in comp_txt]
+    df['simp_txt'] = [' '.join(x) for x in simp_txt]
     df['simp_tokens'] = [spacy.tokenize(x) for x in simp_txt]
     df = add_pos_dep(df, comp_txt, pos_vocab, spacy)
     df = add_edits(df)
@@ -215,11 +217,11 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical, do_
 def editnet_data_to_editnetID(df,vocab, output_path):
     """
     TODO: Uppdate doc: dependency columns only if do_dep == True
-    this function reads from df.columns=['comp_tokens', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
+    this function reads from df.columns=['comp_txt', 'comp_tokens', 'simp_txt', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
     and add vocab ids for comp_tokens, simp_tokens, and edit_labels
-    :param df: df.columns=['comp_tokens', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
+    :param df: df.columns=['comp_txt', 'comp_tokens', 'simp_txt', 'simp_tokens', 'edit_labels','comp_pos_tags','comp_pos_ids', 'comp_dep_tree']
     :param output_path: the path to store the df
-    :return: a dataframe with df.columns=['comp_tokens', 'simp_tokens', 'edit_labels',
+    :return: a dataframe with df.columns=['comp_txt', 'comp_tokens', 'simp_txt', 'simp_tokens', 'edit_labels',
                                             'comp_ids','simp_id','edit_ids',
                                             'comp_pos_tags','comp_pos_ids',
                                             'comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols'])
@@ -243,15 +245,15 @@ def editnet_data_to_editnetID(df,vocab, output_path):
         if do_dep == False and 'comp_dep_tree' in example is not None:
             do_dep = True
         comp_id, simp_id, edit_id = prepare_example(example,vocab)
-        ex=[example['comp_tokens'], comp_id,
-            example['simp_tokens'], simp_id,
+        ex=[example['comp_txt'], example['comp_tokens'], comp_id,
+            example['simp_txt'], example['simp_tokens'], simp_id,
             example['edit_labels'], edit_id,
             example['comp_pos_tags'],example['comp_pos_ids']
          ]
         if do_dep:
             ex += [example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']]
         out_list.append(ex)
-    columns= ['comp_tokens','comp_ids', 'simp_tokens','simp_ids',
+    columns= ['comp_txt', 'comp_tokens', 'comp_ids', 'simp_txt', 'simp_tokens','simp_ids',
               'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids']
     if do_dep:
         columns += ['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols']
