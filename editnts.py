@@ -151,6 +151,18 @@ class EditDecoderRNN(nn.Module):
 
 
     def forward(self, input_edits, hidden_org,encoder_outputs_org, org_ids, simp_sent,teacher_forcing_ratio=1.):
+        """
+        encsteps: (input) complex sequence length (max length, rest are padded)
+        nsteps: number of edit labels
+        ysize: (output) simple sequence length
+
+        Forward step.
+        :param input_edits: editlabels_ids (bsz x nsteps) (GOLD)
+        :param hidden_org: encoder h and c of last timestep t. (h, c) each one (bsz x 2*nhid)
+        :param encoder_outputs_org: encoder output vectors h_i (bsz x encsteps x 2*nhid)
+        :param org_ids: original sentence ids (bsz x encsteps)
+        :param simp_sent: simple sentence ids (GOLD) (bsz x ysize)
+        """
         #input_edits and simp_sent need to be padded with START
         bsz, nsteps = input_edits.size()
 
@@ -162,33 +174,38 @@ class EditDecoderRNN(nn.Module):
         # decoder in the training:
 
         if use_teacher_forcing:
-            embedded_edits = self.embedding(input_edits)
-            output_edits, hidden_edits = self.rnn_edits(embedded_edits, hidden_org)
+            embedded_edits = self.embedding(input_edits) # bsz x nsteps x embdim
+            output_edits, hidden_edits = self.rnn_edits(embedded_edits, hidden_org) # bzx x nsteps x 2*nhid (GOLD)
+                                                                                    # h,c: num_layers x bsz x 2*nhid
 
             embedded_words = self.embedding(simp_sent)
-            output_words, hidden_words = self.rnn_words(embedded_words, hidden_org)
+            output_words, hidden_words = self.rnn_words(embedded_words, hidden_org) # bsz x ysteps x 2*nhid, (h,c)
+                                                                                    # h,c: num_layers x bsz x 2*nhid
 
-
-            key_org = self.attn_Projection_org(output_edits)  # bsz x nsteps x nhid MIGHT USE WORD HERE
+            key_org = self.attn_Projection_org(output_edits)  # bsz x nsteps x 2*nhid MIGHT USE WORD HERE
             logits_org = torch.bmm(key_org, encoder_outputs_org.transpose(1, 2))  # bsz x nsteps x encsteps
             attn_weights_org = F.softmax(logits_org, dim=-1)  # bsz x nsteps x encsteps
-            attn_applied_org = torch.bmm(attn_weights_org, encoder_outputs_org)  # bsz x nsteps x nhid
-
+            attn_applied_org = torch.bmm(attn_weights_org, encoder_outputs_org)  # bsz x nsteps x 2*nhid
+            # attn_applied_org -> a_i = \sum_j alpha_ij * w_j where:
+            # w_j input token j
+            # \alpha_ij attention from edit i to token j
             for t in range(nsteps-1):
                 # print(t)
-                decoder_output_t = output_edits[:, t:t + 1, :]
-                attn_applied_org_t = attn_applied_org[:, t:t + 1, :]
+                decoder_output_t = output_edits[:, t:t + 1, :] # bsz x 1 x nhid (GOLD)
+                attn_applied_org_t = attn_applied_org[:, t:t + 1, :] # bsz x 1 x nhid (GOLD, as it uses output_edits)
 
                 ## find current word
-                inds = torch.LongTensor(counter_for_keep_del)
-                dummy = inds.view(-1, 1, 1)
-                dummy = dummy.expand(dummy.size(0), dummy.size(1), encoder_outputs_org.size(2)).cuda()
+                # give previous word from input sentence
+                inds = torch.LongTensor(counter_for_keep_del) # bsz
+                dummy = inds.view(-1, 1, 1) # bsz x 1 x 1
+                dummy = dummy.expand(dummy.size(0), dummy.size(1), encoder_outputs_org.size(2)).cuda() # bsz x 1 x nhid
                 c = encoder_outputs_org.gather(1, dummy)
 
+                # give previous word from tgt simp_sent
                 inds = torch.LongTensor(counter_for_keep_ins)
                 dummy = inds.view(-1, 1, 1)
                 dummy = dummy.expand(dummy.size(0), dummy.size(1), output_words.size(2)).cuda()
-                c_word = output_words.gather(1, dummy)
+                c_word = output_words.gather(1, dummy)  # GOLD (Y)
 
                 output_t = torch.cat((decoder_output_t, attn_applied_org_t, c,c_word),
                                      2)  # bsz*nsteps x nhid*2
@@ -213,16 +230,20 @@ class EditDecoderRNN(nn.Module):
 
 
         else: # no teacher forcing
-            decoder_input_edit = input_edits[:, :1]
-            decoder_input_word=simp_sent[:,:1]
+            decoder_input_edit = input_edits[:, :1] # bsz x 1; input_edits first token is special
+            decoder_input_word=simp_sent[:,:1] # bsz x 1; simp_sent first token is special
             t, tt = 0, max(MAX_LEN,input_edits.size(1)-1)
 
             # initialize
             embedded_edits = self.embedding(decoder_input_edit)
-            output_edits, hidden_edits = self.rnn_edits(embedded_edits, hidden_org)
+            output_edits, hidden_edits = self.rnn_edits(embedded_edits, hidden_org) # bsz x 1 x 2*nhid
+                                                                                    # h,c: num_layers x bsz x 2*nhid
+                                                                                    #      (even if batch_first = True!!)
 
             embedded_words = self.embedding(decoder_input_word)
-            output_words, hidden_words = self.rnn_words(embedded_words, hidden_org)
+            output_words, hidden_words = self.rnn_words(embedded_words, hidden_org) # bsz x 1 x 2*nhid
+                                                                                    # h,c: num_layers x bsz x 2*nhid
+                                                                                    #      (even if batch_first = True!!)
             #
             # # give previous word from tgt simp_sent
             # inds = torch.LongTensor(counter_for_keep_ins)
@@ -232,19 +253,23 @@ class EditDecoderRNN(nn.Module):
 
             while t < tt:
                 if t>0:
-                    embedded_edits = self.embedding(decoder_input_edit)
+                    embedded_edits = self.embedding(decoder_input_edit) # bsz x 1 x embdim
                     output_edits, hidden_edits = self.rnn_edits(embedded_edits, hidden_edits)
 
-                key_org = self.attn_Projection_org(output_edits)  # bsz x nsteps x nhid
-                logits_org = torch.bmm(key_org, encoder_outputs_org.transpose(1, 2))  # bsz x nsteps x encsteps
-                attn_weights_org_t = F.softmax(logits_org, dim=-1)  # bsz x nsteps x encsteps
-                attn_applied_org_t = torch.bmm(attn_weights_org_t, encoder_outputs_org)  # bsz x nsteps x nhid
+                key_org = self.attn_Projection_org(output_edits)  # bsz x 1 x 2*nhid
+                logits_org = torch.bmm(key_org, encoder_outputs_org.transpose(1, 2))  # bsz x 1 x encsteps
+                attn_weights_org_t = F.softmax(logits_org, dim=-1)  # bsz x 1 x encsteps
+                attn_applied_org_t = torch.bmm(attn_weights_org_t, encoder_outputs_org)  # bsz x 1 x 2*nhid
 
                 ## find current word
                 inds = torch.LongTensor(counter_for_keep_del)
                 dummy = inds.view(-1, 1, 1)
                 dummy = dummy.expand(dummy.size(0), dummy.size(1), encoder_outputs_org.size(2)).cuda()
                 c = encoder_outputs_org.gather(1, dummy)
+                # output_edits: bsz x 1 x 2*nhid
+                # attn_applied_org_t: bsz x 1 x 2*nhid
+                # c: bsz x 1 x 2*nhid (TODO: check)
+                # hidden_words[0]: num_layers x bsz x 2*nhid
                 output_t = torch.cat((output_edits, attn_applied_org_t, c, hidden_words[0].transpose(0,1)),
                                      2)  # bsz*nsteps x nhid*2
                 output_t = self.attn_MLP(output_t)
