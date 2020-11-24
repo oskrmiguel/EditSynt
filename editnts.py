@@ -208,7 +208,7 @@ class EditDecoderRNN(nn.Module):
                 c_word = output_words.gather(1, dummy)  # GOLD (Y)
 
                 output_t = torch.cat((decoder_output_t, attn_applied_org_t, c,c_word),
-                                     2)  # bsz*nsteps x nhid*2
+                                     2)  # bsz x nsteps x nhid*2*4
                 output_t = self.attn_MLP(output_t)
                 output_t = F.log_softmax(self.out(output_t), dim=-1)
                 decoder_out.append(output_t)
@@ -271,7 +271,7 @@ class EditDecoderRNN(nn.Module):
                 # c: bsz x 1 x 2*nhid (TODO: check)
                 # hidden_words[0]: num_layers x bsz x 2*nhid
                 output_t = torch.cat((output_edits, attn_applied_org_t, c, hidden_words[0].transpose(0,1)),
-                                     2)  # bsz*nsteps x nhid*2
+                                     2)  # bsz x 1 x nhid*2*4
                 output_t = self.attn_MLP(output_t)
                 output_t = F.log_softmax(self.out(output_t), dim=-1)
 
