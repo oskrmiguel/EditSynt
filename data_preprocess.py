@@ -19,15 +19,16 @@ START = 'START' # this has a vocab id, which is uded for indicating start of the
 STOP = 'STOP' # This has a vocab id, which is used to stop decoding [5]
 
 class Spacy:
+    l2m = { 'en' : 'en_core_web_sm',
+            'es' : 'es_core_news_sm',
+            'fr' : 'fr_core_news_sm',
+            'it' : 'it_core_news_sm',
+            'it-large' : 'it_core_news_lg'}
     def __init__(self, lang):
-        l2m = { 'en' : 'en_core_web_sm',
-                'es' : 'es_core_news_sm',
-                'fr' : 'fr_core_news_sm',
-                'it' : 'it_core_news_sm'}
-        if lang not in l2m:
+        if lang not in self.l2m:
             print('Language "{}" not supported.'.format(lang))
             exit(1)
-        self.nlp = spacy.load(l2m[lang])
+        self.nlp = spacy.load(self.l2m[lang])
         self.tokenizer = self.nlp.Defaults.create_tokenizer(self.nlp)
 
     def analize(self, sent):
