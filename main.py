@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 import sys
+import subprocess
 import argparse
 import collections
 import logging
@@ -301,8 +302,15 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(args.device)
 
+    git_commit = 'unknown'
+    try:
+        res = subprocess.run('./GIT-VERSION-FILE', stdout=subprocess.PIPE)
+        git_commit = res.stdout.decode('utf-8').strip()
+    except:
+        pass
+
     # load vocab-related files and init vocab
-    logging.info(' '.join(sys.argv))
+    logging.info(git_commit + ' ' + ' '.join(sys.argv))
     logging.info('*'*10)
     vocab = vocabulary.Vocab(logging.info)
     vocab.add_vocab_from_file(args.vocab_file, args.vocab_size)
