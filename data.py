@@ -54,17 +54,15 @@ def id2edits(ids,vocab):
     edit_list = [vocab.i2w[i] for i in ids]
     return edit_list
 
-def tok2id(dfs, vocab, max_len):
-    uid = vocab.w2i[UNK]
+def tokens2ids(df, vocab):
+    unk = vocab.w2i[UNK]
     ids = []
-    for df in dfs:
-        if len(df) > max_len:
-            df = df[:max_len]
-        pad = max_len - len(df)
-        ids.append(np.array([vocab.w2i.get(i, uid) for i in df] + [0] * pad))
-    return np.vstack(ids)
+    for s in df:
+        id_array = np.array([vocab.w2i.get(i, unk) for i in s])
+        ids.append(id_array)
+    return ids
 
-def batchify(data, vocab, max_len=100): #max_len cutout defined by human
+def batchify(data, max_len=100): #max_len cutout defined by human
     bsz = len(data)
     try:
         maxlen_data = max([s.shape[0] for s in data])
@@ -72,7 +70,6 @@ def batchify(data, vocab, max_len=100): #max_len cutout defined by human
         maxlen_data = max([len(s) for s in data])
     maxlen = min(maxlen_data, max_len)
     batch = np.zeros((bsz, maxlen), dtype=np.int)
-    data = tok2id(data, vocab, maxlen)
     for i, s in enumerate(data):
         try:
             batch[i, :min(s.shape[0],maxlen)] = s[:min(s.shape[0],maxlen)]
@@ -82,31 +79,29 @@ def batchify(data, vocab, max_len=100): #max_len cutout defined by human
     return Variable(torch.from_numpy(batch)).cuda()
 
 
-def batchify_start_stop(data, vocab, max_len=100,start_id=4,stop_id=5): #max_len cutout defined by human
+def batchify_start_stop(data, max_len=100): #max_len cutout defined by human
     # add start token at the beginning and stop token at the end of each sequence in a batch
-    data = [np.append(s, [stop_id]) for s in data]  # stop 3
-    data = [np.insert(s, 0, start_id) for s in data]  # stop 3
+    data = [np.append(s, [STOP_ID]) for s in data]  # stop 3
+    data = [np.insert(s, 0, START_ID) for s in data]  # stop 3
 
     bsz = len(data)
     maxlen_data = max([s.shape[0] for s in data])
     maxlen = min(maxlen_data, max_len)
     batch = np.zeros((bsz, maxlen), dtype=np.int)
-    data = tok2id(data, vocab, maxlen)
     for i, s in enumerate(data):
         batch[i, :min(s.shape[0],maxlen)] = s[:min(s.shape[0],maxlen)]
         # batch[i, s.shape[0]:] = 3
     return Variable(torch.from_numpy(batch)).cuda()
 
 
-def batchify_stop(data, vocab, max_len=100,start_id=4,stop_id=5): #max_len cutout defined by human
+def batchify_stop(data, max_len=100): #max_len cutout defined by human
     # add stop tokens at the end of the sequence in each batch
-    data = [np.append(s, [stop_id]) for s in data]  # stop 3
+    data = [np.append(s, [STOP_ID]) for s in data]  # stop 3
 
     bsz = len(data)
     maxlen_data = max([s.shape[0] for s in data])
     maxlen = min(maxlen_data, max_len)
     batch = np.zeros((bsz, maxlen), dtype=np.int)
-    data = tok2id(data, vocab, maxlen)
     for i, s in enumerate(data):
         batch[i, :min(s.shape[0],maxlen)] = s[:min(s.shape[0],maxlen)]
         # batch[i, s.shape[0]:] = 3
@@ -199,11 +194,11 @@ def prepare_batch(batch_df,vocab, max_length=100, do_gcn = False):
         :return: inp_simp:the corresponding simple sentences in ids
         :return: batch_df['comp_tokens']:the complex tokens
         """
-    inp = batchify_stop(batch_df['comp_tokens'], vocab, max_len=max_length)
-    inp_pos = batchify_stop(batch_df['comp_pos_ids'], vocab, max_len=max_length)
-    inp_simp=batchify_start_stop(batch_df['simp_tokens'], vocab, max_len=max_length)
+    inp = batchify_stop(tokens2ids(batch_df['comp_tokens'], vocab), max_len=max_length)
+    inp_pos = batchify_stop(batch_df['comp_pos_ids'], max_len=max_length)
+    inp_simp=batchify_start_stop(tokens2ids(batch_df['simp_tokens'], vocab), max_len=max_length)
     # tgt = batchify_start_stop(batch_df['edit_ids'], max_len=max_length)  # edit ids has early stop
-    tgt = batchify_start_stop(batch_df['edit_labels'], vocab, max_len=max_length)  # new_edit_ids do not do early stopping
+    tgt = batchify_start_stop(tokens2ids(batch_df['edit_labels'], vocab), max_len=max_length)  # new_edit_ids do not do early stopping
     # I think new edit ids do not ave early stopping
     adj = None
     if do_gcn:
