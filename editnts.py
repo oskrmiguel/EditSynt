@@ -76,7 +76,7 @@ class EncoderRNN(nn.Module):
         out = memory_bank.transpose(0,1)
         try:
             if self.do_gcn:
-                out = self.gcn(out, adj)
+                out = out + self.gcn(out, adj)
         except AttributeError:
             pass
         return out, (h_unsorted,c_unsorted)
