@@ -22,6 +22,7 @@ class Spacy:
     l2m = { 'en' : 'en_core_web_sm',
             'en-large' : 'en_core_web_lg',
             'es' : 'es_core_news_sm',
+            'es-large' : 'es_core_news_lg',
             'fr' : 'fr_core_news_sm',
             'fr-large' : 'fr_core_news_lg',
             'it' : 'it_core_news_sm',
