@@ -1,4 +1,3 @@
-import os
 import argparse
 import random
 import data_preprocess as dp

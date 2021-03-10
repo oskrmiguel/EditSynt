@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -54,6 +53,14 @@ class Spacy:
         root = [token for token in doc if token.head == token][0]
         return self._dep2str(root, 'root')
 
+    def _depth(self, root):
+        d = [0] + [self._depth(child) for child in root.children]
+        return max(d) + 1
+
+    def depth(self, doc):
+        'Compte depth of dependency tree'
+        root = [token for token in doc if token.head == token][0]
+        return self._depth(root)
 
     def doc2adj(self, doc):
         '''Directly produce adjacency list from spacy output'''
@@ -210,12 +217,26 @@ def process_raw_data(comp_txt, simp_txt, pos_vocab, lang, discard_identical, do_
         df['comp_pos_ids'] = pos_ids_list
         return df
 
+    def add_simple_dep(df, tgt_sentences, spacy):
+        dep_sentences = []
+        print("Simple DEP tagging:", end='', flush = True)
+        for i, sent in enumerate(tgt_sentences):
+            if not i % 10000:
+                print(' {}'.format(i), end=' ', flush = True)
+            spacy_doc = spacy.analize(sent)
+            tree_str = spacy.dep2str(spacy_doc)
+            dep_sentences.append(tree_str)
+        df['simp_dep_tree'] = dep_sentences
+        print('done')
+        return df
     spacy = Spacy(lang)
     df['comp_txt'] = [' '.join(x) for x in comp_txt]
     df['simp_txt'] = [' '.join(x) for x in simp_txt]
     df['simp_tokens'] = [spacy.tokenize(x) for x in simp_txt]
     df = add_pos_dep(df, comp_txt, pos_vocab, spacy)
     df = add_edits(df)
+    if  do_dep:
+        df = add_simple_dep(df, simp_txt, spacy)
     return df
 
 def editnet_data_to_editnetID(df,vocab, output_path):
@@ -255,12 +276,12 @@ def editnet_data_to_editnetID(df,vocab, output_path):
             example['comp_pos_tags'],example['comp_pos_ids']
          ]
         if do_dep:
-            ex += [example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols']]
+            ex += [example['comp_dep_tree'], example['comp_dep_rows'], example['comp_dep_cols'], example['simp_dep_tree']]
         out_list.append(ex)
     columns= ['comp_txt', 'comp_tokens', 'comp_ids', 'simp_txt', 'simp_tokens','simp_ids',
               'edit_labels','new_edit_ids','comp_pos_tags','comp_pos_ids']
     if do_dep:
-        columns += ['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols']
+        columns += ['comp_dep_tree', 'comp_dep_rows', 'comp_dep_cols', 'simp_dep_tree']
     outdf = pd.DataFrame(out_list, columns=columns)
     outdf.to_pickle(output_path)
     print('saved to %s'%output_path)
