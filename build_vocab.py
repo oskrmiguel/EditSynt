@@ -4,7 +4,7 @@ from data_preprocess import Spacy
 
 def do(fname, spacy, W):
     for line in open(fname, encoding='utf-8', errors='surrogate'):
-        for token in [x for x in spacy.tokenize(line.lower())]:
+        for token in [x for x in spacy.tokenize(line.strip().lower())]:
             W[token] = W.get(token, 0) + 1
     return W
 
