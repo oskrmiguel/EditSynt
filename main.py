@@ -229,7 +229,6 @@ def evaluation(infile, edit_net, args, vocab, outfile, logging):
     print(res_str)
 
 def main():
-    torch.manual_seed(233)
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,dest='data_dir',
                         help='Directory with train/val data.')
@@ -279,6 +278,7 @@ def main():
     parser.add_argument('--nolog', action="store_true", help='Disable logging.')
     parser.add_argument('--device', type=int, default=1,
                         help='select GPU')
+    parser.add_argument('--seed', type=int, default=233)
 
     #train_file = '/media/vocab_data/yue/TS/editnet_data/%s/train.df.filtered.pos'%dataset
     # test='/media/vocab_data/yue/TS/editnet_data/%s/test.df.pos' % args.dataset
@@ -299,6 +299,8 @@ def main():
         print("Can't --eval_input without a pretrained model")
         exit(1)
 
+    if args.seed != 0:
+        torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(args.device)
 
