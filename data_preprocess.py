@@ -26,6 +26,7 @@ class Spacy:
             'fr-large' : 'fr_core_news_lg',
             'it' : 'it_core_news_sm',
             'it-large' : 'it_core_news_lg'}
+
     def __init__(self, lang):
         if lang not in self.l2m:
             print('Language "{}" not supported.'.format(lang))
@@ -34,7 +35,9 @@ class Spacy:
         self.tokenizer = self.nlp.Defaults.create_tokenizer(self.nlp)
 
     def analize(self, sent):
-        return self.nlp(" ".join(sent))
+        if type(sent) == list:
+            sent = " ".join(sent)
+        return self.nlp(sent)
 
     def tokenize(self, sent):
         if type(sent) == list:

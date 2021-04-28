@@ -1,3 +1,6 @@
+import sys
+print('Do not use this script, use do_build_vocab.py instead', file=sys.stderr)
+exit(1)
 import os
 import argparse
 from data_preprocess import Spacy
@@ -10,6 +13,7 @@ def do(fname, spacy, W):
 
 #fnames= ['/tartalo01/users/ocumbicus001/corpora/simplext/test.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/test.simple', '/tartalo01/users/ocumbicus001/corpora/simplext/train.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/train.simple', '/tartalo01/users/ocumbicus001/corpora/simplext/valid.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/valid.simple']
 #fnames= ['/tartalo01/users/ocumbicus001/corpora/simplext/test.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/test.simple', '/tartalo01/users/ocumbicus001/corpora/simplext/train.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/train.simple', '/tartalo01/users/ocumbicus001/corpora/simplext/valid.complex', '/tartalo01/users/ocumbicus001/corpora/simplext/valid.simple']
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('files', nargs='*',

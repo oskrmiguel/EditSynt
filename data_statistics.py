@@ -12,7 +12,7 @@ def process_file(fname, spacy, sent_lens, dep_depths):
     for n, line in enumerate(open(fname)):
         if not n % 100:
             print('{}'.format(n), end=' ', file=sys.stderr, flush=True)
-        spacy_doc = spacy.analize(line.split('\t'))
+        spacy_doc = spacy.analize(line.strip().split())
         sent_lens.append(len(spacy_doc))
         dep_depths.append(spacy.depth(spacy_doc))
     print(file=sys.stderr, flush=True)
