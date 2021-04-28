@@ -9,7 +9,7 @@ def build_vocab(F, lang):
             for w in spacy.tokenize(line.rstrip().lower()):
                 V[w] = V.get(w, 0) + 1
     for k, v in sorted(V.items(), key=lambda x: x[1], reverse=True):
-        print("{} {}\n".format(k, v))
+        print("{} {}".format(k, v))
 
 if len(sys.argv) < 3:
     print("Usage: build_vocab lang input_files > vocab.txt")
