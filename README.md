@@ -1,4 +1,4 @@
-# A-Syntax-Aware-Edit-based-System-for-Text-Simplification
+# Edit+synt: A Syntax-Aware Edit-based System for Text Simplification
 This is the official repository of the Paper A Syntax-Aware Edit-based System for Text Simplification presented at the RANPL 2021 conference.
 Please cite this paper if you use our code or system output.
 ```
