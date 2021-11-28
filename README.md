@@ -1,5 +1,5 @@
 # Edit+synt: A Syntax-Aware Edit-based System for Text Simplification
-This is the official repository of the Paper A Syntax-Aware Edit-based System for Text Simplification presented at the [RANPL 2021 conference](https://ranlp.org/ranlp2021/proceedings-20Sep.pdf).
+This is the official repository of the Paper [A Syntax-Aware Edit-based System for Text Simplification](https://aclanthology.org/2021.ranlp-1.38/) presented at the [RANPL 2021 conference](https://ranlp.org/ranlp2021/proceedings-20Sep.pdf).
 Please cite this paper if you use our code or system output.
 ```
 @InProceedings{cumbicuspineda-gonzalezdios-soroa:2021:RANLP,
