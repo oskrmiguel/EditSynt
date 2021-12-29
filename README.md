@@ -17,3 +17,5 @@ Please cite this paper if you use our code or system output.
 ```
 Our system is based on [EditNTS](https://github.com/yuedongP/EditNTS), but we propose leveraging syntactic informationderived from dependency trees into a well knownedit-based ATS system. We present a syntax awareedit-based system for ATS which uses a graph con-volutional network (GCN) layer to represent the dependency trees. In thetraining process, the GCN learns to refine the rep-resentation of input sentence words according totheir structural relations in the dependency graph.These syntax augmented representations are com-bined with the encoder outputs using a residualconnection, and passed to the decoding stage.
 Our experiments confirm the effectiveness of ourapproach, outperforming previous ATS systemsand improving the state-of-the-art results in severaldatasets. 
+
+For more information write to oskr2703@gmail.com
